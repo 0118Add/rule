@@ -64,14 +64,15 @@
     {"tag":"hk","type":"selector","outbounds":[]},
     {"tag":"sg","type":"selector","outbounds":[]},
     {"tag":"jp","type":"selector","outbounds":[]},
+    {"tag":"kr","type":"selector","outbounds":[]},
     {"tag":"us","type":"selector","outbounds":[]},
     {"tag":"eu","type":"selector","outbounds":[]},
     {"tag":"other","type":"selector","outbounds":[]},
-    {"tag":"proxy","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"hk"},
+    {"tag":"proxy","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"hk"},
     {"tag":"direct","type":"selector","outbounds":["IPv4优先","IPv6优先","双栈"],"default":"IPv4优先"},
-    {"tag":"ai","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"us"},
-    {"tag":"tg","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"sg"},
-    {"tag":"GLOBAL","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"hk"},
+    {"tag":"ai","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"us"},
+    {"tag":"tg","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"sg"},
+    {"tag":"GLOBAL","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"hk"},
     {"tag":"IPv4优先","type":"direct","domain_resolver":{"server":"local","strategy":"prefer_ipv4"}},
     {"tag":"IPv6优先","type":"direct","domain_resolver":{"server":"local","strategy":"prefer_ipv6"}},
     {"tag":"双栈","type":"direct","domain_resolver":"local"}
@@ -90,4 +91,5 @@
       "external_ui_download_detour": "proxy"
     }
   }
+
 }
