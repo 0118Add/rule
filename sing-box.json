@@ -49,6 +49,7 @@
     "rule_set": [
       {"tag":"private","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs","download_detour":"proxy"},
       {"tag":"ai","type":"remote","url":"https://github.com/DustinWin/ruleset_geodata/releases/download/sing-box-ruleset/ai.srs","download_detour":"proxy"},
+      {"tag":"gemini","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google-gemini.srs","download_detour":"proxy"},
       {"tag":"telegram","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-telegram.srs","download_detour":"proxy"},
       {"tag":"telegram_ip","type":"remote","url":"https://github.com/DustinWin/ruleset_geodata/releases/download/sing-box-ruleset/telegramip.srs","download_detour":"proxy"},
       {"tag":"github","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-github.srs","download_detour":"proxy"},
@@ -71,6 +72,7 @@
     {"tag":"proxy","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"hk"},
     {"tag":"direct","type":"selector","outbounds":["IPv4优先","IPv6优先","双栈"],"default":"IPv4优先"},
     {"tag":"ai","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"us"},
+    {"tag":"gemini","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"jp"},
     {"tag":"tg","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"sg"},
     {"tag":"GLOBAL","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"hk"},
     {"tag":"IPv4优先","type":"direct","domain_resolver":{"server":"local","strategy":"prefer_ipv4"}},
@@ -93,3 +95,4 @@
   }
 
 }
+
