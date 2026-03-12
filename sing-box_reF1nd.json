@@ -20,15 +20,14 @@
       {"tag":"hosts","type":"hosts","predefined":{"dns.alidns.com":["223.5.5.5","223.6.6.6"],"doh.pub":["1.12.12.21","120.53.53.53"],"dns.google":["8.8.8.8","8.8.4.4"],"cloudflare-dns.com":["104.16.248.249","104.16.249.249"]}}
     ],
     "rules": [
-      {"clash_mode":"Global","query_type":["SVCB","HTTPS"],"action":"reject"},
-      {"clash_mode":"Global","query_type":["A","AAAA"],"server":"fake-ip-dns-server","rewrite_ttl":1},
+      {"clash_mode":"Global","query_type":["A","AAAA"],"server":"fake-ip-dns-server","rewrite_ttl":1,"strategy":"ipv4_only"},
       {"clash_mode":"Global","server":"proxy_dns"},
       {"clash_mode":"Direct","server":"direct_dns"},
       {"domain_suffix":["market.xiaomi.com"],"server":"direct_dns"},
       {"domain_suffix":["lancache.steamcontent.com"],"server":"proxy_dns"},
       {"query_type":"PTR","server":"local"},
       {"query_type":["SVCB","HTTPS"],"action":"reject"},
-      {"query_type":["A","AAAA"],"server":"fake-ip-dns-server","rewrite_ttl":1},
+      {"query_type":["A","AAAA"],"server":"fake-ip-dns-server","rewrite_ttl":1,"strategy":"ipv4_only"},
       {"rule_set":"gfw","server":"proxy_dns"}
     ],
     "final": "direct_dns",
@@ -37,6 +36,7 @@
   },
   "route": {
     "rules": [
+      {"network":"icmp","outbound":"direct"},
       {"domain":["Mijia Cloud"],"domain_suffix":["push.apple.com"],"rule_set":["telegram_ip"],"invert":true,"action":"sniff"},
       {"protocol":"dns","action":"hijack-dns"},
       {"udp_disable_domain_unmapping":true,"udp_connect":true,"action":"route-options"},
@@ -44,7 +44,6 @@
       {"clash_mode":"Direct","outbound":"direct"},
       {"domain":["abyss.cyapi.cn","ad.cyapi.cn","gather.colorfulclouds.net"],"action":"reject"},
       {"domain_suffix":["steamserver.net"],"outbound":"direct"},
-      {"network":"icmp","outbound":"direct"},
       {"protocol":"quic","rule_set":"youtube","action":"reject"},
       {"ip_is_private":true,"rule_set":"private","outbound":"direct"},
       {"rule_set":"ai","outbound":"ai"},
@@ -61,6 +60,7 @@
     "rule_set": [
       {"tag":"private","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs","download_detour":"proxy"},
       {"tag":"ai","type":"remote","url":"https://github.com/DustinWin/ruleset_geodata/releases/download/sing-box-ruleset/ai.srs","download_detour":"proxy"},
+      {"tag":"gemini","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google-gemini.srs","download_detour":"proxy"},
       {"tag":"telegram","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-telegram.srs","download_detour":"proxy"},
       {"tag":"telegram_ip","type":"remote","url":"https://github.com/DustinWin/ruleset_geodata/releases/download/sing-box-ruleset/telegramip.srs","download_detour":"proxy"},
       {"tag":"github","type":"remote","url":"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-github.srs","download_detour":"proxy"},
@@ -82,6 +82,7 @@
     {"tag":"proxy","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"hk"},
     {"tag":"direct","type":"selector","outbounds":["IPv4优先","IPv6优先","双栈"],"default":"IPv4优先"},
     {"tag":"ai","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"us"},
+    {"tag":"gemini","type":"selector","outbounds":["hk","sg","jp","kr","us","eu","other"],"default":"us"},
     {"tag":"tg","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"sg"},
     {"tag":"GLOBAL","type":"selector","outbounds":["hk","sg","jp","us","eu","other"],"default":"hk"},
     {"tag":"IPv4优先","type":"direct","domain_resolver":{"server":"local","strategy":"prefer_ipv4"}},
