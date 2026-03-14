@@ -308,7 +308,7 @@ cat > "$tmpf2" << 'EOF'
                 }
                 const w0 = value.split('\n')[0].split(' ')[0];
                 const w1 = value.split('\n')[1].split(' ')[0];
-                return `${wrap(iconGauge(palette.text), 'CPU电源模式', colorizeCpuMode(w0))}${sep}${wrap(iconBolt(palette.text), 'CPU功耗', colorizeCpuPower(w1))}`
+                return `${wrap(iconGauge(palette.text), '电源模式', colorizeCpuMode(w0))}${sep}${wrap(iconBolt(palette.text), '功耗', colorizeCpuPower(w1))}`
             }
         },
         {
@@ -342,7 +342,7 @@ cat > "$tmpf2" << 'EOF'
                 const f1 = value.match(/CPU min MHz.*?([\d]+)/)[1];
                 const f2 = value.match(/CPU max MHz.*?([\d]+)/)[1];
                 const muted = `<span style="color:${palette.muted}; font-weight:600;">`;
-                return `${iconActivity(palette.text)}${label('CPU实时')} ${colorizeCpuFreq(f0)}${sep}${label('最小')} ${muted}${f1} MHz</span>${sep}${label('最大')} ${muted}${f2} MHz</span>`
+                return `${iconActivity(palette.text)}${label('实时')} ${colorizeCpuFreq(f0)}${sep}${label('最小')} ${muted}${f1} MHz</span>${sep}${label('最大')} ${muted}${f2} MHz</span>`
             }
         },
         {
