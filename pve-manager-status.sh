@@ -288,7 +288,7 @@ cat > "$tmpf2" << 'EOF'
                 }
                 const w0 = value.split('\n')[0].split(' ')[0];
                 const w1 = value.split('\n')[1].split(' ')[0];
-                return `CPU电源模式: ${colorizeCpuMode(w0)} | CPU功耗: ${colorizeCpuPower(w1)}`
+                return `电源模式: ${colorizeCpuMode(w0)} | 功耗: ${colorizeCpuPower(w1)}`
             }
         },
         {
@@ -307,7 +307,7 @@ cat > "$tmpf2" << 'EOF'
                 const f0 = value.match(/cpu MHz.*?([\d]+)/)[1];
                 const f1 = value.match(/CPU min MHz.*?([\d]+)/)[1];
                 const f2 = value.match(/CPU max MHz.*?([\d]+)/)[1];
-                return `CPU实时: ${colorizeCpuFreq(f0)} | 最小: ${f1} MHz | 最大: ${f2} MHz `
+                return `实时: ${colorizeCpuFreq(f0)} | 最小: ${f1} MHz | 最大: ${f2} MHz `
             }
         },
         {
@@ -366,7 +366,7 @@ cat > "$tmpf2" << 'EOF'
                 for (const [i, cpu] of data.entries()) {
                     if (cpu.packages.length > 0) {
                         for (const packageTemp of cpu.packages) {
-                            output += `CPU ${i}: ${colorizeCpuTemp(packageTemp)} | `;
+                            output += `处理器: ${colorizeCpuTemp(packageTemp)} | `;
                         }
                     }
 
