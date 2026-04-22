@@ -1,12 +1,12 @@
 pr: &pr {type: select, url: https://www.gstatic.com/generate_204, interval: 600, lazy: false}
-select: &select {include-all: true, type: select, url: https://www.gstatic.com/generate_204, interval: 600, lazy: false}
+select: &select {type: select, url: https://www.gstatic.com/generate_204, interval: 600, lazy: false, include-all: true}
 p: &p {type: http, interval: 86400, proxy: DIRECT, header: {User-Agent: ["clash-verge/v2.4.7"]}, health-check: {enable: true, url: https://www.gstatic.com/generate_204, interval: 600, lazy: false}}
 
 proxy-providers:
   provider1:
     <<: *p
     url: "此处填入订阅"
-    path: ./proxy_providers/provider1.txt
+    path: ./proxy_providers/provider1.yaml
 
 proxies:
   - name: IPv4优先
@@ -38,25 +38,6 @@ profile:
   store-selected: true
   store-fake-ip: true
 
-sniffer:
-  enable: true
-  force-dns-mapping: true
-  parse-pure-ip: true
-  override-destination: false
-  sniff:
-    HTTP:
-      ports: [80, 8080-8880]
-      override-destination: true
-    TLS:
-      ports: [443, 8443]
-    QUIC:
-      ports: [443, 8443]
-  skip-domain:
-    - "Mijia Cloud"
-    - "+.push.apple.com"
-  skip-dst-address:
-    - "rule-set:telegram_ip"
-
 tun:
   enable: true
   stack: mixed
@@ -77,17 +58,17 @@ dns:
   fake-ip-filter:
     - "+.market.xiaomi.com"
     - "lancache.steamcontent.com"
+    - "rule-set:private"
   default-nameserver:
     - https://223.6.6.6/dns-query
   proxy-server-nameserver:
     - https://doh.pub/dns-query
   nameserver:
     #- https://dns.alidns.com/dns-query
-    #- https://mosdns.apad.pro/api-query
-    - https://pz.fyi/dns-query
+    - https://mosdns.apad.pro/api-query#ecs=192.168.1.0/24
+    #- https://pz.fyi/dns-query
     #- https://d.atri.ink/dns-query
   nameserver-policy:
-    "rule-set:bytedance": [180.184.1.1]
     "rule-set:private,cn": [system]
     "rule-set:gfw": ["https://dns.google/dns-query#代理"]
   direct-nameserver:
@@ -97,7 +78,7 @@ dns:
 
 hosts:
   dns.alidns.com: [223.5.5.5, 223.6.6.6]
-  doh.pub: [1.12.12.21, 120.53.53.53]
+  doh.pub: [1.12.12.12, 120.53.53.53]
   dns.google: [8.8.8.8, 8.8.4.4]
   mosdns.apad.pro: 117.50.76.202
   pz.fyi: 106.54.11.55
@@ -111,7 +92,7 @@ proxy-groups:
   - {name: 日本, <<: *select, filter: "(?i)日本|japan", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png"}
   - {name: 美国, <<: *select, filter: "(?i)美国|united states", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png"}
   - {name: 欧洲, <<: *select, filter: "(?i)伦敦|英国|United Kingdom|法国|France|德国|Germany|荷兰|Netherlands", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/European_Union.png"}
-  - {name: 其他, <<: *select, filter: "(?i)^(?!.*(?:优先|双栈|回家|剩余|到期|Traffic|Expire|香港|hong kong|新加坡|狮城|singapore|日本|japan|美国|united states|伦敦|英国|United Kingdom|法国|France|德国|Germany|荷兰|Netherlands)).*", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Nations.png"}
+  - {name: 其他, <<: *select, filter: "(?i)^(?!.*(?:优先|双栈|回家|剩余|到期|时期|Traffic|Expire|香港|hong kong|新加坡|狮城|singapore|日本|japan|美国|united states|伦敦|英国|United Kingdom|法国|France|德国|Germany|荷兰|Netherlands)).*", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_Nations.png"}
 
   - {name: 代理, <<: *pr, proxies: [香港, 新加坡, 日本, 美国, 欧洲, 其他], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/World_Map.png"}
   - {name: 直连, type: select, proxies: [IPv4优先, IPv6优先, 双栈], url: https://connectivitycheck.platform.hicloud.com/generate_204, interval: 600, lazy: false, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/China_Map.png"}
@@ -124,6 +105,9 @@ rules:
   - DOMAIN,abyss.cyapi.cn,REJECT
   - DOMAIN,ad.cyapi.cn,REJECT
   - DOMAIN,gather.colorfulclouds.net,REJECT
+  - DOMAIN,a.nel.cloudflare.com,直连
+  - DOMAIN,challenges.cloudflare.com,直连
+  - DOMAIN,static.cloudflareinsights.com,直连
   - DOMAIN-SUFFIX,steamserver.net,直连
   - RULE-SET,private,直连
   - RULE-SET,private_ip,直连,no-resolve
@@ -143,10 +127,6 @@ rule-anchor:
   ip: &ip {type: http, interval: 86400, behavior: ipcidr, format: mrs, proxy: 代理}
   domain: &domain {type: http, interval: 86400, behavior: domain, format: mrs, proxy: 代理}
 rule-providers:
-  bytedance:
-    <<: *domain
-    path: ./rule_providers/bytedance.mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bytedance.mrs"
   private:
     <<: *domain
     path: ./rule_providers/private.mrs
@@ -190,7 +170,7 @@ rule-providers:
   cn:
     <<: *domain
     path: ./rule_providers/cn.mrs
-    url: "https://raw.githubusercontent.com/YiXuanZX/rules/main/cn-additional-list.mrs"
+    url: "https://static-file-global.353355.xyz/rules/cn-additional-list.mrs"
   cn_ip:
     <<: *ip
     path: ./rule_providers/cn_ip.mrs
