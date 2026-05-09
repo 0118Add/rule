@@ -326,7 +326,7 @@ cat > "$tmpf2" << 'EOF'
             itemId: 'cpupower',
             colspan: 2,
             printBar: false,
-            title: gettext('处理器能耗'),
+            title: gettext('CPU能耗'),
             textField: 'cpupower',
             renderer:function(value){
                 function colorizeCpuMode(mode) {
@@ -349,7 +349,7 @@ cat > "$tmpf2" << 'EOF'
             itemId: 'cpufreq',
             colspan: 2,
             printBar: false,
-            title: gettext('处理器频率'),
+            title: gettext('CPU频率'),
             textField: 'cpufreq',
             renderer:function(value){
                 function colorizeCpuFreq(freq) {
