@@ -1,11 +1,11 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2025-10-28
+# Last Modified: 2026-04-26
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.0 by Sagittarius\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.3 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
-echo -e "OpenSource on GitHub (https://github.com/Sagittarius/PVE-Manager-Status)\n"
+echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
 
 # 先决条件执行判断
 # 执行用户判断, 必须为 root 用户执行
@@ -19,18 +19,17 @@ if ! command -v pveversion &> /dev/null; then
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         if [[ "$ID" != "debian" && "$ID_LIKE" != *"debian"* ]]; then
-            echo -e "⛔ 检测到当前系统非 Debian 发行版, 停止执行!"
+            echo -e "⛔ 检测到当前系统非 Debian 发行版, 终止执行!"
             echo && exit 1
         fi
     fi
-    echo -e "⛔ 未检测到 ProxmoxVE 环境, 停止执行!"
+    echo -e "⛔ 未检测到 ProxmoxVE 环境, 终止执行!"
     echo && exit 1
 fi
 
-read -p "确认执行吗? [y/N]:" para
-
 # 脚本执行前确认
-[[ "$para" =~ ^[Yy]$ ]] || { [[ "$para" =~ ^[Nn]$ ]] && echo -e "\n🚫 操作取消, 未执行任何操作!" && exit 0; echo -e "\n⚠️ 无效输入, 未执行任何操作!"; exit 1; }
+read -p "确认执行吗? [y/N]:" para
+[[ "$para" =~ ^[Yy]$ ]] || { [[ "$para" =~ ^[Nn]$ ]] && echo -e "\n🚫 操作取消, 未执行任何操作!\n" && exit 0; echo -e "\n⚠️ 无效输入, 未执行任何操作!\n"; exit 1; }
 
 nodes="/usr/share/perl5/PVE/API2/Nodes.pm"
 pvemanagerlib="/usr/share/pve-manager/js/pvemanagerlib.js"
@@ -38,11 +37,9 @@ pvever=$(pveversion | awk -F"/" '{print $2}')
 
 echo -e "\n⚙️ 当前 Proxmox VE 版本: $pvever"
 
+####################   配置文件备份步骤   ####################
 
-
-####################   备份步骤   ####################
-
-echo -e "\n💾 修改开始前备份原文件:"
+echo -e "\n💾 正在备份原文件:"
 
 delete_old_backups() {
     local pattern="$1"
@@ -71,34 +68,80 @@ echo "新备份生成: ${nodes}.${pvever}.bak ✅"
 cp "$pvemanagerlib" "${pvemanagerlib}.${pvever}.bak"
 echo "新备份生成: ${pvemanagerlib}.${pvever}.bak ✅"
 
+echo && sleep 0.5
 
+####################   修改前重装软件包避免重复修改   ####################
 
-####################   依赖检查 & 环境准备   ####################
+spinner() {
+    local pid=$1
+    local text="$2"
+    local delay=0.1
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 
-# 避免重复修改, 重装 pve-manager
-echo -e "\n♻️ 避免重复修改, 重新安装 pve-manager..."
-apt-get install --reinstall -y pve-manager
+    while kill -0 "$pid" 2>/dev/null; do
+        for (( i=0; i<${#spinstr}; i++ )); do
+            printf "\r%s %s" "$text" "${spinstr:$i:1}"
+            sleep $delay
+        done
+    done
+
+    printf "\r%s " "$text"
+}
+
+echo -e "♻️ 正在重装相关软件包:"
+
+reinstall_packages=(pve-manager pve-i18n)
+reinstall_failed=()
+
+for pkg in "${reinstall_packages[@]}"; do
+    text="正在重装 $pkg:"
+
+    apt-get install --reinstall -y "$pkg" >/dev/null 2>&1 &
+    pid=$!
+
+    spinner "$pid" "$text"
+
+    wait $pid
+    if [ $? -eq 0 ]; then
+        echo "已重装 ✅"
+    else
+        echo "重装失败 ⛔"
+        reinstall_failed+=("$pkg")
+    fi
+done
+
+# 最终结果判断
+if [ ${#reinstall_failed[@]} -ne 0 ]; then
+    echo -e "\n⛔ 软件包重装失败! 请检查你的 apt 源配置或网络连接"
+    echo && exit 1
+else
+    echo -e "相关软件包已重装完成!"
+fi
+
+echo && sleep 0.5
+
+####################   软件包依赖检查   ####################
 
 # 软件包依赖
-echo -e "\n🗃️ 检查依赖软件包安装情况..."
-packages=(sudo sysstat lm-sensors smartmontools linux-cpupower)
-missing=()
+echo -e "🗃️ 正在检查依赖软件包:"
+dep_packages=(sudo sysstat lm-sensors smartmontools linux-cpupower)
+dep_missing=()
 
 # 检查依赖状态
 installed_list=$(apt list --installed 2>/dev/null)
-for pkg in "${packages[@]}"; do
+for pkg in "${dep_packages[@]}"; do
     if echo "$installed_list" | grep -q "^$pkg/"; then
-        echo "$pkg: 已安装✅"
+        echo "$pkg: 已安装 ✅"
     else
-        echo "$pkg: 未安装⛔"
-        missing+=("$pkg")
+        echo "$pkg: 未安装 ⛔"
+        dep_missing+=("$pkg")
     fi
 done
 
 # 安装缺失的包
-if [ ${#missing[@]} -ne 0 ]; then
-    echo -e "\n📦 检查到软件包缺失: ${missing[*]} 开始安装..."
-    if ! (apt-get update && apt-get install -y "${missing[@]}"); then
+if [ ${#dep_missing[@]} -ne 0 ]; then
+    echo -e "\n📦 检查到软件包缺失: ${dep_missing[*]} 开始安装..."
+    if ! (apt-get update && apt-get install -y "${dep_missing[@]}"); then
         echo -e "\n⛔ 依赖软件包安装失败! 请检查你的 apt 源配置或网络连接"
         echo && exit 1
     fi
@@ -107,14 +150,17 @@ else
     echo -e "所有依赖软件包均已安装!"
 fi
 
-# 配置传感器模块
-echo -e "\n🧰 开始配置传感器模块..."
+echo && sleep 0.5
+
+####################   配置设备传感器模块   ####################
+
+echo -e "🧰 正在配置设备传感器模块:"
 sensors-detect --auto > /tmp/sensors
 
 drivers=$(sed -n '/Chip drivers/,/\#----cut here/p' /tmp/sensors | sed '/Chip /d;/cut/d')
 
 if [ -n "$drivers" ]; then
-    echo "发现传感器模块, 正在配置以便开机自动加载"
+    echo "发现传感器模块, 正在配置开机自动加载"
     for drv in $drivers; do
         modprobe "$drv"
         if grep -qx "$drv" /etc/modules; then
@@ -131,7 +177,7 @@ if [ -n "$drivers" ]; then
     else
         echo "未找到 /etc/init.d/kmod 跳过此步骤 ➡️"
     fi
-    echo "传感器模块已配置完成!"
+    echo "设备传感器模块已配置完成!"
 elif grep -q "No modules to load, skipping modules configuration" /tmp/sensors; then
     echo "未找到需要手动加载的模块, 跳过配置步骤 (可能已由内核自动加载) ➡️"
 elif grep -q "Sorry, no sensors were detected" /tmp/sensors; then
@@ -142,8 +188,14 @@ fi
 
 rm -f /tmp/sensors
 
-# 配置必要的执行权限 (替代危险的 chmod +s)
-echo -e "\n🔩 配置必要的执行权限..."
+# 确保 msr 模块被加载并设为开机自启, 为 turbostat 提供支持
+modprobe msr && echo msr > /etc/modules-load.d/turbostat-msr.conf
+
+echo && sleep 0.5
+
+####################   配置 sudo 执行权限   ####################
+
+echo -e "🔩 正在配置必要的执行权限:"
 echo -e "允许 www-data 用户以 sudo 权限执行特定监控命令"
 SUDOERS_FILE="/etc/sudoers.d/pve-manager-status"
 # 首先移除可能被添加的 SUID 权限设置, 以防曾经被其它监控脚本添加
@@ -155,21 +207,26 @@ for bin in "${binaries[@]}"; do
 done
 
 # 定义需要 sudo 权限执行命令的绝对路径
-IOSTAT_PATH=$(command -v iostat)
 SENSORS_PATH=$(command -v sensors)
-SMARTCTL_PATH=$(command -v smartctl)
 TURBOSTAT_PATH=$(command -v turbostat)
+SMARTCTL_PATH=$(command -v smartctl)
+IOSTAT_PATH=$(command -v iostat)
 
 # 配置 sudoers 规则内容
 echo -e "正在配置 sudoers 规则内容并进行语法检查..."
 read -r -d '' SUDOERS_CONTENT << EOM
 # Allow www-data user (PVE Web GUI) to run specific hardware monitoring commands
-# This file is managed by pve-manager-status.sh (https://github.com/Sagittarius/PVE-Manager-Status)
+# This file is managed by pve-manager-status.sh (https://github.com/MiKing233/PVE-Manager-Status)
+
+Cmnd_Alias PVE_MANAGER_STATUS = ${SENSORS_PATH}, ${TURBOSTAT_PATH}, ${SMARTCTL_PATH}, ${IOSTAT_PATH}
+Defaults!PVE_MANAGER_STATUS !log_allowed
+Defaults!PVE_MANAGER_STATUS !pam_session
 
 www-data ALL=(root) NOPASSWD: ${SENSORS_PATH}
+www-data ALL=(root) NOPASSWD: ${TURBOSTAT_PATH} -S -q -s PkgWatt -i 0.1 -n 1 -c package
 www-data ALL=(root) NOPASSWD: ${SMARTCTL_PATH} -a /dev/*
 www-data ALL=(root) NOPASSWD: ${IOSTAT_PATH} -d -x -k 1 1
-www-data ALL=(root) NOPASSWD: ${TURBOSTAT_PATH} -S -q -s PkgWatt -i 0.1 -n 1 -c package
+
 EOM
 
 # 使用 visudo 在最终添加前对 sudoers 规则执行语法检查
@@ -199,14 +256,11 @@ else
     echo && exit 1
 fi
 
-# 确保 msr 模块被加载并设为开机自启, 为 turbostat 提供支持
-modprobe msr && echo msr > /etc/modules-load.d/turbostat-msr.conf
-
-
+echo && sleep 0.5
 
 ####################   概要页面监控功能实现   ####################
 
-echo -e "\n📋 添加概要页面硬件监控信息..."
+echo -e "📋 正在添加概要页面监控功能:"
 
 # 修改 node.pm 文件前置步骤
 tmpf1=$(mktemp /tmp/pve-manager-status.XXXXXX) || exit 1
@@ -246,7 +300,8 @@ EOF
 if ! grep -q 'PVE::pvecfg::version_text' "$nodes"; then
     echo "⛔ 在 $nodes 中未找到锚点, 操作终止!"
     rm -f "$tmpf1"
-    echo -e "⚠️ 锚点'PVE::pvecfg::version_text', 文件可能已更新或与当前版本不兼容\n" && exit 1
+    echo -e "⚠️ 锚点'PVE::pvecfg::version_text', 文件可能已更新或与当前版本不兼容"
+    echo && exit 1
 fi
 
 # 应用更改
@@ -258,12 +313,11 @@ if grep -q 'cpupower' "$nodes"; then
 else
     echo "⛔ 检查对 $nodes 添加的内容未生效!"
     rm -f "$tmpf1"
-    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
+    echo -e "⚠️ 请检查文件权限或手动检查文件内容"
+    echo && exit 1
 fi
 
 rm -f "$tmpf1"
-
-
 
 # 修改 pvemanagerlib.js 文件前置步骤
 tmpf2=$(mktemp /tmp/pve-manager-status.XXXXXX) || exit 1
@@ -275,40 +329,20 @@ cat > "$tmpf2" << 'EOF'
             title: gettext('CPU能耗'),
             textField: 'cpupower',
             renderer:function(value){
-                const palette = {
-                    low: '#3A7D6A',
-                    mid: '#C28B2C',
-                    high: '#C45B5B',
-                    text: '#4B5563',
-                    muted: '#6B7280'
-                };
-                const sep = '<span style="color:#9CA3AF;"> | </span>';
-                function iconBolt(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:4px"><path d="M9 1L3 9h4l-1 6 6-8H8l1-6z"/></svg>`;
-                }
-                function iconGauge(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:4px"><path d="M3 12a5 5 0 0 1 10 0"/><path d="M8 8l3-2"/><circle cx="8" cy="8" r="1"/></svg>`;
-                }
-                function label(text) {
-                    return `<span style="color:${palette.text}; font-weight:600;">${text}</span>`;
-                }
-                function wrap(icon, labelText, valueHtml) {
-                    return `<span style="display:inline-flex;align-items:center;gap:4px;">${icon}${label(labelText)}<span style="color:${palette.muted};">:</span> ${valueHtml}</span>`;
-                }
                 function colorizeCpuMode(mode) {
-                    if (mode === 'powersave') return `<span style="color:${palette.low}; font-weight:600;">${mode}</span>`;
-                    if (mode === 'performance') return `<span style="color:${palette.high}; font-weight:600;">${mode}</span>`;
-                    return `<span style="color:${palette.mid}; font-weight:600;">${mode}</span>`;
+                    if (mode === 'powersave') return `<span style="color:green; font-weight:bold;">${mode}</span>`;
+                    if (mode === 'performance') return `<span style="color:red; font-weight:bold;">${mode}</span>`;
+                    return `<span style="color:orange; font-weight:bold;">${mode}</span>`;
                 }
                 function colorizeCpuPower(power) {
                     const powerNum = parseFloat(power);
-                    if (powerNum < 20) return `<span style="color:${palette.low}; font-weight:600;">${power} W</span>`;
-                    if (powerNum < 50) return `<span style="color:${palette.mid}; font-weight:600;">${power} W</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${power} W</span>`;
+                    if (powerNum < 20) return `<span style="color:green; font-weight:bold;">${power} W</span>`;
+                    if (powerNum < 50) return `<span style="color:orange; font-weight:bold;">${power} W</span>`;
+                    return `<span style="color:red; font-weight:bold;">${power} W</span>`;
                 }
                 const w0 = value.split('\n')[0].split(' ')[0];
                 const w1 = value.split('\n')[1].split(' ')[0];
-                return `${wrap(iconGauge(palette.text), '电源模式', colorizeCpuMode(w0))}${sep}${wrap(iconBolt(palette.text), '功耗', colorizeCpuPower(w1))}`
+                return `CPU电源模式: ${colorizeCpuMode(w0)} | CPU功耗: ${colorizeCpuPower(w1)}`
             }
         },
         {
@@ -318,31 +352,16 @@ cat > "$tmpf2" << 'EOF'
             title: gettext('CPU频率'),
             textField: 'cpufreq',
             renderer:function(value){
-                const palette = {
-                    low: '#3A7D6A',
-                    mid: '#C28B2C',
-                    high: '#C45B5B',
-                    text: '#4B5563',
-                    muted: '#6B7280'
-                };
-                const sep = '<span style="color:#9CA3AF;"> | </span>';
-                function iconActivity(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:4px"><polyline points="1 8 4 8 6 4 9 12 11 8 15 8"/></svg>`;
-                }
-                function label(text) {
-                    return `<span style="color:${palette.text}; font-weight:600;">${text}</span>`;
-                }
                 function colorizeCpuFreq(freq) {
                     const freqNum = parseFloat(freq);
-                    if (freqNum < 1500) return `<span style="color:${palette.low}; font-weight:600;">${freq} MHz</span>`;
-                    if (freqNum < 3000) return `<span style="color:${palette.mid}; font-weight:600;">${freq} MHz</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${freq} MHz</span>`;
+                    if (freqNum < 1500) return `<span style="color:green; font-weight:bold;">${freq} MHz</span>`;
+                    if (freqNum < 3000) return `<span style="color:orange; font-weight:bold;">${freq} MHz</span>`;
+                    return `<span style="color:red; font-weight:bold;">${freq} MHz</span>`;
                 }
                 const f0 = value.match(/cpu MHz.*?([\d]+)/)[1];
                 const f1 = value.match(/CPU min MHz.*?([\d]+)/)[1];
                 const f2 = value.match(/CPU max MHz.*?([\d]+)/)[1];
-                const muted = `<span style="color:${palette.muted}; font-weight:600;">`;
-                return `${iconActivity(palette.text)}${label('实时')} ${colorizeCpuFreq(f0)}${sep}${label('最小')} ${muted}${f1} MHz</span>${sep}${label('最大')} ${muted}${f2} MHz</span>`
+                return `CPU实时: ${colorizeCpuFreq(f0)} | 最小: ${f1} MHz | 最大: ${f2} MHz `
             }
         },
         {
@@ -352,286 +371,78 @@ cat > "$tmpf2" << 'EOF'
             title: gettext('传感器'),
             textField: 'sensors',
             renderer: function(value) {
-                const palette = {
-                    low: '#3A7D6A',
-                    mid: '#C28B2C',
-                    high: '#C45B5B',
-                    text: '#4B5563',
-                    muted: '#6B7280'
-                };
-                function iconChip(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><rect x="4" y="4" width="8" height="8" rx="1"/><path d="M2 6h2M2 10h2M12 6h2M12 10h2M6 2v2M10 2v2M6 12v2M10 12v2"/></svg>`;
+                function colorizeTemp(temp) {
+                    let num = parseFloat(temp);
+                    if (num < 60) return `<span style="color:green; font-weight:bold;">${temp}°C</span>`;
+                    if (num < 80) return `<span style="color:orange; font-weight:bold;">${temp}°C</span>`;
+                    return `<span style="color:red; font-weight:bold;">${temp}°C</span>`;
                 }
-                function iconGpu(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><rect x="2" y="3" width="12" height="8" rx="1"/><path d="M6 13h4"/></svg>`;
+                function colorizeFan(rpm) {
+                    let num = parseFloat(rpm);
+                    if (num < 1500) return `<span style="color:green; font-weight:bold;">${rpm} RPM</span>`;
+                    if (num < 3000) return `<span style="color:orange; font-weight:bold;">${rpm} RPM</span>`;
+                    return `<span style="color:red; font-weight:bold;">${rpm} RPM</span>`;
                 }
-                function iconBoard(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><rect x="3" y="3" width="10" height="10" rx="1"/><circle cx="6" cy="6" r="1"/><circle cx="10" cy="10" r="1"/><path d="M8 3v3M3 8h3"/></svg>`;
-                }
-                function iconFan(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><circle cx="8" cy="8" r="1"/><path d="M8 3c2 0 3 2 1 3M13 8c0 2-2 3-3 1M8 13c-2 0-3-2-1-3M3 8c0-2 2-3 3-1"/></svg>`;
-                }
-                const icons = {
-                    cpu: iconChip(palette.text),
-                    gpu: iconGpu(palette.text),
-                    board: iconBoard(palette.text),
-                    fan: iconFan(palette.text)
-                };
-                function label(text) {
-                    return `<span style="color:${palette.text}; font-weight:600;">${text}</span>`;
-                }
-                function colorizeCpuTemp(temp) {
-                    const tempNum = parseFloat(temp);
-                    if (tempNum < 60) return `<span style="color:${palette.low}; font-weight:600;">${temp}°C</span>`;
-                    if (tempNum < 80) return `<span style="color:${palette.mid}; font-weight:600;">${temp}°C</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${temp}°C</span>`;
-                }
-                function colorizeGpuTemp(temp) {
-                    const tempNum = parseFloat(temp);
-                    if (tempNum < 60) return `<span style="color:${palette.low}; font-weight:600;">${temp}°C</span>`;
-                    if (tempNum < 80) return `<span style="color:${palette.mid}; font-weight:600;">${temp}°C</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${temp}°C</span>`;
-                }
-                function colorizeAcpiTemp(temp) {
-                    const tempNum = parseFloat(temp);
-                    if (tempNum < 60) return `<span style="color:${palette.low}; font-weight:600;">${temp}°C</span>`;
-                    if (tempNum < 80) return `<span style="color:${palette.mid}; font-weight:600;">${temp}°C</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${temp}°C</span>`;
-                }
-                function colorizeFanRpm(rpm) {
-                    const rpmNum = parseFloat(rpm);
-                    if (rpmNum < 1500) return `<span style="color:${palette.low}; font-weight:600;">${rpm}转/分钟</span>`;
-                    if (rpmNum < 3000) return `<span style="color:${palette.mid}; font-weight:600;">${rpm}转/分钟</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${rpm}转/分钟</span>`;
-                }
+                
                 value = value.replace(/Â/g, '');
-                let data = [];
-                let cpus = value.matchAll(/^(?:coretemp-isa|k10temp-pci)-(\w{4})$\n.*?\n((?:Package|Core|Tctl)[\s\S]*?^\n)+/gm);
-                for (const cpu of cpus) {
-                    let cpuNumber = parseInt(cpu[1], 10);
-                    data[cpuNumber] = {
-                        packages: [],
-                        cores: []
-                    };
-
-                    let packages = cpu[2].matchAll(/^(?:Package id \d+|Tctl):\s*\+([^°C ]+).*$/gm);
-                    for (const package of packages) {
-                        data[cpuNumber]['packages'].push(package[1]);
+                let lines = value.split('\n');
+                let packageTemp = null;
+                let coreTemps = [];
+                let boardTemp = null;
+                let cpuCrit = null;
+                let fanRpm = null;
+                
+                for (let line of lines) {
+                    // 提取 Package id 0 温度
+                    let pkgMatch = line.match(/^Package id 0:\s*\+(\d+(?:\.\d+)?)°C/);
+                    if (pkgMatch) {
+                        packageTemp = parseFloat(pkgMatch[1]).toFixed(1);
                     }
-                    let cores = cpu[2].matchAll(/^Core (\d+):\s*\+([^°C ]+).*$/gm);
-                    for (const core of cores) {
-                        var corecombi = `${label('核心 ' + core[1])}: ${colorizeCpuTemp(core[2])}`
-                        data[cpuNumber]['cores'].push(corecombi);
+                    // 提取所有 Core 核心温度
+                    let coreMatch = line.match(/^Core\s+(\d+):\s*\+(\d+(?:\.\d+)?)°C/);
+                    if (coreMatch) {
+                        coreTemps.push(parseFloat(coreMatch[2]).toFixed(1));
+                    }
+                    // 提取 CPU 临界温度（crit）
+                    let critMatch = line.match(/crit\s*=\s*\+(\d+(?:\.\d+)?)°C/);
+                    if (critMatch && cpuCrit === null && !line.includes('nvme')) {
+                        cpuCrit = critMatch[1];
+                    }
+                    // 提取主板温度（temp1）
+                    let boardMatch = line.match(/^temp1:\s*\+(\d+(?:\.\d+)?)°C/);
+                    if (boardMatch) {
+                        boardTemp = parseFloat(boardMatch[1]).toFixed(1);
+                    }
+                    // 提取风扇转速（例如 fan2: 1023 RPM）
+                    let fanMatch = line.match(/^fan\d+:\s+(\d+)\s+RPM/);
+                    if (fanMatch) {
+                        fanRpm = fanMatch[1];
                     }
                 }
-
-                let output = '';
-                for (const [i, cpu] of data.entries()) {
-                    if (cpu.packages.length > 0) {
-                        for (const packageTemp of cpu.packages) {
-                            output += `${icons.cpu}${label('CPU ' + i)}: ${colorizeCpuTemp(packageTemp)} | `;
-                        }
+                
+                // 构建结果字符串
+                let parts = [];
+                if (packageTemp !== null) {
+                    let cpuStr = `CPU: ${colorizeTemp(packageTemp)}`;
+                    if (coreTemps.length > 0) {
+                        cpuStr += ` ( ${coreTemps.join(' | ')} )`;
                     }
-
-                    let gpus = value.matchAll(/^amdgpu-pci-(\w*)$\n((?!edge:)[ \S]*?\n)*((?:edge)[\s\S]*?^\n)+/gm);
-                    for (const gpu of gpus) {
-                        let gpuNumber = 0;
-                        data[gpuNumber] = {
-                            edges: []
-                        };
-
-                        let edges = gpu[3].matchAll(/^edge:\s*\+([^°C ]+).*$/gm);
-                        for (const edge of edges) {
-                            data[gpuNumber]['edges'].push(edge[1]);
-                        }
-
-                        for (const [k, gpu] of data.entries()) {
-                            if (gpu.edges.length > 0) {
-                                output += `${icons.gpu}${label('核显')}: `;
-                                for (const edgeTemp of gpu.edges) {
-                                    output += `${colorizeGpuTemp(edgeTemp)}, `;
-                                }
-                                output = output.slice(0, -2);
-                                output += ' | ';
-                            } else {
-                                output = output.slice(0, -2);
-                            }
-                        }
+                    if (cpuCrit !== null) {
+                        cpuStr += ` ,超限: ${cpuCrit}°C`;
                     }
-
-                    let acpitzs = value.matchAll(/^acpitz-acpi-(\d*)$\n.*?\n((?:temp)[\s\S]*?^\n)+/gm);
-                    for (const acpitz of acpitzs) {
-                        let acpitzNumber = parseInt(acpitz[1], 10);
-                        data[acpitzNumber] = {
-                            acpisensors: []
-                        };
-
-                        let acpisensors = acpitz[2].matchAll(/^temp\d+:\s*\+([^°C ]+).*$/gm);
-                        for (const acpisensor of acpisensors) {
-                            data[acpitzNumber]['acpisensors'].push(acpisensor[1]);
-                        }
-
-                        for (const [k, acpitz] of data.entries()) {
-                            if (acpitz.acpisensors.length > 0) {
-                                output += `${icons.board}${label('主板')}: `;
-                                for (const acpiTemp of acpitz.acpisensors) {
-                                    output += `${colorizeAcpiTemp(acpiTemp)}, `;
-                                }
-                                output = output.slice(0, -2);
-                                output += ' | ';
-                            } else {
-                                output = output.slice(0, -2);
-                            }
-                        }
-                    }
-
-                    let FunStates = value.matchAll(/^(?:[a-zA-z]{2,3}\d{4}|dell_smm)-isa-(\w{4})$\n((?![ \S]+: *\d+ +RPM)[ \S]*?\n)*((?:[ \S]+: *\d+ RPM)[\s\S]*?^\n)+/gm);
-                    for (const FunState of FunStates) {
-                        let FanNumber = 0;
-                        data[FanNumber] = {
-                            rotationals: [],
-                            cpufans: [],
-                            motherboardfans: [],
-                            pumpfans: [],
-                            systemfans: []
-                        };
-
-                        let rotationals = FunState[3].match(/^([ \S]+: *[0-9]\d* +RPM)[ \S]*?$/gm);
-                        for (const rotational of rotationals) {
-                            if (rotational.toLowerCase().indexOf("pump") !== -1 || rotational.toLowerCase().indexOf("opt") !== -1){
-                                let pumpfans = rotational.matchAll(/^[ \S]+: *([1-9]\d*) +RPM[ \S]*?$/gm);
-                                for (const pumpfan of pumpfans) {
-                                    data[FanNumber]['pumpfans'].push(pumpfan[1]);
-                                }
-                            } else if (rotational.toLowerCase().indexOf("cpu") !== -1 || rotational.toLowerCase().indexOf("processor") !== -1){
-                                let cpufans = rotational.matchAll(/^[ \S]+: *([1-9]\d*) +RPM[ \S]*?$/gm);
-                                for (const cpufan of cpufans) {
-                                    data[FanNumber]['cpufans'].push(cpufan[1]);
-                                }
-                            } else if (rotational.toLowerCase().indexOf("motherboard") !== -1){
-                                let motherboardfans = rotational.matchAll(/^[ \S]+: *([1-9]\d*) +RPM[ \S]*?$/gm);
-                                for (const motherboardfan of motherboardfans) {
-                                    data[FanNumber]['motherboardfans'].push(motherboardfan[1]);
-                                }
-                            }  else {
-                                let systemfans = rotational.matchAll(/^[ \S]+: *([1-9]\d*) +RPM[ \S]*?$/gm);
-                                for (const systemfan of systemfans) {
-                                    data[FanNumber]['systemfans'].push(systemfan[1]);
-                                }
-                            }
-                        }
-
-                        for (const [j, FunState] of data.entries()) {
-                            if (FunState.cpufans.length > 0 || FunState.motherboardfans.length > 0 || FunState.pumpfans.length > 0 || FunState.systemfans.length > 0) {
-                                output += `${icons.fan}${label('风扇')}: `;
-                                if (FunState.cpufans.length > 0) {
-                                    output += 'CPU-';
-                                    for (const cpufan_value of FunState.cpufans) {
-                                        output += `${colorizeFanRpm(cpufan_value)}, `;
-                                    }
-                                }
-
-                                if (FunState.motherboardfans.length > 0) {
-                                    output += '主板-';
-                                    for (const motherboardfan_value of FunState.motherboardfans) {
-                                        output += `${colorizeFanRpm(motherboardfan_value)}, `;
-                                    }
-                                }
-
-                                if (FunState.pumpfans.length > 0) {
-                                    output += '水冷-';
-                                    for (const pumpfan_value of FunState.pumpfans) {
-                                        output += `${colorizeFanRpm(pumpfan_value)}, `;
-                                    }
-                                }
-
-                                if (FunState.systemfans.length > 0) {
-                                    if (FunState.cpufans.length > 0 || FunState.pumpfans.length > 0) {
-                                        output += '系统-';
-                                    }
-                                    for (const systemfan_value of FunState.systemfans) {
-                                        output += `${colorizeFanRpm(systemfan_value)}, `;
-                                    }
-                                }
-                                output = output.slice(0, -2);
-                                output += ' | ';
-                            } else if (FunState.cpufans.length == 0 && FunState.pumpfans.length == 0 && FunState.systemfans.length == 0) {
-                                output += ` ${icons.fan}${label('风扇')}: 停转`;
-                                output += ' | ';
-                            } else {
-                                output = output.slice(0, -2);
-                            }
-                        }
-                    }
-                    output = output.slice(0, -2);
-
-                    if (cpu.cores.length > 1) {
-                        output += '\n';
-                        for (j = 1;j < cpu.cores.length;) {
-                            for (const coreTemp of cpu.cores) {
-                                output += `${coreTemp} | `;
-                                j++;
-                                if ((j-1) % 4 == 0){
-                                    output = output.slice(0, -2);
-                                    output += '\n';
-                                }
-                            }
-                        }
-                        output = output.slice(0, -2);
-                    }
-                    output += '\n';
+                    parts.push(cpuStr);
                 }
-
-                output = output.slice(0, -2);
-                return output.replace(/\n/g, '<br>');
-            }
+                if (boardTemp !== null) {
+                    parts.push(`主板: ${colorizeTemp(boardTemp)}`);
+                }
+                if (fanRpm !== null) {
+                    parts.push(`风扇: ${colorizeFan(fanRpm)}`);
+                }
+                
+                return parts.join(' | ');
+            },
         },
-        {
-            itemId: 'corefreq',
-            colspan: 2,
-            printBar: false,
-            title: gettext('核心频率'),
-            textField: 'cpufreq',
-            renderer: function(value) {
-                const palette = {
-                    low: '#3A7D6A',
-                    mid: '#C28B2C',
-                    high: '#C45B5B',
-                    text: '#4B5563'
-                };
-                function iconChip(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><rect x="4" y="4" width="8" height="8" rx="1"/><path d="M2 6h2M2 10h2M12 6h2M12 10h2M6 2v2M10 2v2M6 12v2M10 12v2"/></svg>`;
-                }
-                function colorizeCpuFreq(freq) {
-                    const freqNum = parseFloat(freq);
-                    if (freqNum < 1500) return `<span style="color:${palette.low}; font-weight:600;">${freq} MHz</span>`;
-                    if (freqNum < 3000) return `<span style="color:${palette.mid}; font-weight:600;">${freq} MHz</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${freq} MHz</span>`;
-                }
-                const freqMatches = value.matchAll(/^cpu MHz\s*:\s*([\d\.]+)/gm);
-                const frequencies = [];
-
-                for (const match of freqMatches) {
-                    const coreNum = frequencies.length + 1;
-                    frequencies.push(`<span style="color:${palette.text}; font-weight:600;">线程 ${coreNum}</span>: ${colorizeCpuFreq(parseInt(match[1]))}`);
-                }
-
-                if (frequencies.length === 0) {
-                    return '无法获取CPU频率信息';
-                }
-
-                const groupedFreqs = [];
-                for (let i = 0; i < frequencies.length; i += 4) {
-                    const group = frequencies.slice(i, i + 4);
-                    if (group.length > 0) {
-                        group[0] = `${iconChip(palette.text)}${group[0]}`;
-                    }
-                    groupedFreqs.push(group.join(' | '));
-                }
-
-                return groupedFreqs.join('<br>');
-            }
-        },
+        
 EOF
 
 for x in {0..9}; do
@@ -645,72 +456,43 @@ for x in {0..9}; do
             title: gettext('NVMe${x}硬盘'),
             textField: 'nvme${x}_status',
             renderer:function(value){
-                const palette = {
-                    low: '#3A7D6A',
-                    mid: '#C28B2C',
-                    high: '#C45B5B',
-                    text: '#4B5563',
-                    muted: '#6B7280'
-                };
-                const sep = '<span style="color:#9CA3AF;"> | </span>';
-                function iconDisk(color) {
-                    return '<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:' + color + ';fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><rect x="2" y="3" width="12" height="10" rx="2"/><circle cx="11" cy="8" r="1"/></svg>';
-                }
-                function iconGauge(color) {
-                    return '<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:' + color + ';fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><path d="M3 12a5 5 0 0 1 10 0"/><path d="M8 8l3-2"/><circle cx="8" cy="8" r="1"/></svg>';
-                }
-                function iconThermo(color) {
-                    return '<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:' + color + ';fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><path d="M9 3a2 2 0 0 0-4 0v6a3 3 0 1 0 4 0V3z"/><path d="M7 6v4"/></svg>';
-                }
-                function iconActivity(color) {
-                    return '<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:' + color + ';fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><polyline points="1 8 4 8 6 4 9 12 11 8 15 8"/></svg>';
-                }
-                function iconClock(color) {
-                    return '<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:' + color + ';fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>';
-                }
-                function label(text) {
-                    return '<span style="color:' + palette.text + '; font-weight:600;">' + text + '</span>';
-                }
-                function muted(text) {
-                    return '<span style="color:' + palette.muted + '; font-weight:600;">' + text + '</span>';
-                }
                 function getSsdLifeColor(life) {
                     const lifeNum = parseFloat(life);
-                    if (lifeNum < 50) return palette.high;
-                    if (lifeNum < 80) return palette.mid;
-                    return palette.low;
+                    if (lifeNum < 50) return 'red';
+                    if (lifeNum < 80) return 'orange';
+                    return 'green';
                 }
                 function colorizeSsdModel(model, life) {
                     const color = getSsdLifeColor(life);
-                    return \`<span style="color:\${color}; font-weight:600;">\${model}</span>\`;
+                    return \`<span style="color:\${color}; font-weight:bold;">\${model}</span>\`;
                 }
                 function colorizeSsdLife(life) {
                     const color = getSsdLifeColor(life);
-                    return \`<span style="color:\${color}; font-weight:600;">\${life}%</span>\`;
+                    return \`<span style="color:\${color}; font-weight:bold;">\${life}%</span>\`;
                 }
                 function colorizeSsdTemp(temp) {
                     const tempNum = parseFloat(temp);
-                    if (tempNum < 50) return \`<span style="color:\${palette.low}; font-weight:600;">\${temp}°C</span>\`;
-                    if (tempNum < 70) return \`<span style="color:\${palette.mid}; font-weight:600;">\${temp}°C</span>\`;
-                    return \`<span style="color:\${palette.high}; font-weight:600;">\${temp}°C</span>\`;
+                    if (tempNum < 50) return \`<span style="color:green; font-weight:bold;">\${temp}°C</span>\`;
+                    if (tempNum < 70) return \`<span style="color:orange; font-weight:bold;">\${temp}°C</span>\`;
+                    return \`<span style="color:red; font-weight:bold;">\${temp}°C</span>\`;
                 }
                 function colorizeSsdLoad(load) {
                     const loadNum = parseFloat(load);
-                    if (loadNum < 50) return \`<span style="color:\${palette.low}; font-weight:600;">\${load}%</span>\`;
-                    if (loadNum < 80) return \`<span style="color:\${palette.mid}; font-weight:600;">\${load}%</span>\`;
-                    return \`<span style="color:\${palette.high}; font-weight:600;">\${load}%</span>\`;
+                    if (loadNum < 50) return \`<span style="color:green; font-weight:bold;">\${load}%</span>\`;
+                    if (loadNum < 80) return \`<span style="color:orange; font-weight:bold;">\${load}%</span>\`;
+                    return \`<span style="color:red; font-weight:bold;">\${load}%</span>\`;
                 }
                 function colorizeIoSpeed(speed) {
                     const speedNum = parseFloat(speed);
-                    if (speedNum > 1000) return \`<span style="color:\${palette.high}; font-weight:600;">\${speed}MB/s</span>\`;
-                    if (speedNum < 100) return \`<span style="color:\${palette.low}; font-weight:600;">\${speed}MB/s</span>\`;
-                    return \`<span style="color:\${palette.mid}; font-weight:600;">\${speed}MB/s</span>\`;
+                    if (speedNum > 1000) return \`<span style="color:red; font-weight:bold;">\${speed}MB/s</span>\`;
+                    if (speedNum < 100) return \`<span style="color:green; font-weight:bold;">\${speed}MB/s</span>\`;
+                    return \`<span style="color:orange; font-weight:bold;">\${speed}MB/s</span>\`;
                 }
                 function colorizeIoLatency(latency) {
                     const latencyNum = parseFloat(latency);
-                    if (latencyNum > 10) return \`<span style="color:\${palette.high}; font-weight:600;">\${latency}ms</span>\`;
-                    if (latencyNum < 1) return \`<span style="color:\${palette.low}; font-weight:600;">\${latency}ms</span>\`;
-                    return \`<span style="color:\${palette.mid}; font-weight:600;">\${latency}ms</span>\`;
+                    if (latencyNum > 10) return \`<span style="color:red; font-weight:bold;">\${latency}ms</span>\`;
+                    if (latencyNum < 1) return \`<span style="color:green; font-weight:bold;">\${latency}ms</span>\`;
+                    return \`<span style="color:orange; font-weight:bold;">\${latency}ms</span>\`;
                 }
                 if (value.length > 0) {
                     value = value.replace(/Â/g, '');
@@ -819,7 +601,7 @@ for x in {0..9}; do
                         if (i > 0) output += '<br><br>';
 
                         if (nvme.Models.length > 0) {
-                            output += iconDisk(palette.text) + colorizeSsdModel(nvme.Models[0], 100 - Number(nvme.Useds[0]));
+                            output += colorizeSsdModel(nvme.Models[0], 100 - Number(nvme.Useds[0]));
 
                             if (nvme.Integrity_Errors.length > 0) {
                                 for (const nvmeIntegrity_Error of nvme.Integrity_Errors) {
@@ -839,16 +621,16 @@ for x in {0..9}; do
                         }
 
                         if (nvme.Capacitys.length > 0) {
-                            output += sep;
+                            output += ' | ';
                             for (const nvmeCapacity of nvme.Capacitys) {
-                                output += label('容量') + ': ' + muted(nvmeCapacity.replace(/ |,/gm, ''));
+                                output += \`容量: \${nvmeCapacity.replace(/ |,/gm, '')}\`;
                             }
                         }
                         output += '<br>';
 
                         if (nvme.Useds.length > 0) {
                             for (const nvmeUsed of nvme.Useds) {
-                                output += iconGauge(palette.text) + label('寿命') + ': ' + colorizeSsdLife(100-Number(nvmeUsed)) + ' ';
+                                output += \`寿命: \${colorizeSsdLife(100-Number(nvmeUsed))} \`;
                                 if (nvme.Reads.length > 0) {
                                     output += '(';
                                     for (const nvmeRead of nvme.Reads) {
@@ -869,79 +651,83 @@ for x in {0..9}; do
                         }
 
                         if (nvme.Temperatures.length > 0) {
-                            output += sep;
+                            output += ' | ';
                             for (const nvmeTemperature of nvme.Temperatures) {
-                                output += iconThermo(palette.text) + label('温度') + ': ' + colorizeSsdTemp(nvmeTemperature);
+                                output += \`温度: \${colorizeSsdTemp(nvmeTemperature)}\`;
                             }
                         }
 
                         if (nvme.utils.length > 0) {
-                            output += sep;
+                            output += ' | ';
                             for (const nvme_util of nvme.utils) {
-                                output += iconActivity(palette.text) + label('负载') + ': ' + colorizeSsdLoad(nvme_util);
+                                output += \`负载: \${colorizeSsdLoad(nvme_util)}\`;
                             }
                         }
-                        output += '<br>';
+                        // output += '<br>';
 
-                        if (nvme.States.length > 0) {
-                            output += iconActivity(palette.text) + label('I/O') + ': ';
-                            if (nvme.r_kBs.length > 0 || nvme.r_awaits.length > 0) {
-                                output += '读-';
-                                if (nvme.r_kBs.length > 0) {
-                                    for (const nvme_r_kB of nvme.r_kBs) {
-                                        var nvme_r_mB = \`\${nvme_r_kB}\` / 1024;
-                                        nvme_r_mB = nvme_r_mB.toFixed(2);
-                                        output += \`速度 \${colorizeIoSpeed(nvme_r_mB)}\`;
-                                    }
-                                }
-                                if (nvme.r_awaits.length > 0) {
-                                    output += ', ';
-                                    for (const nvme_r_await of nvme.r_awaits) {
-                                        output += \`延迟 \${colorizeIoLatency(nvme_r_await)}\`;
-                                    }
-                                }
-                            }
+						// I/O 信息已禁用（如需恢复，请删除下面的 if(false) 包裹）
+						if (false) {
+							if (nvme.States.length > 0) {
+								output += 'I/O: ';
+								if (nvme.r_kBs.length > 0 || nvme.r_awaits.length > 0) {
+									output += '读-';
+									if (nvme.r_kBs.length > 0) {
+										for (const nvme_r_kB of nvme.r_kBs) {
+											var nvme_r_mB = \`\${nvme_r_kB}\` / 1024;
+											nvme_r_mB = nvme_r_mB.toFixed(2);
+											output += \`速度 \${colorizeIoSpeed(nvme_r_mB)}\`;
+										}
+									}
+									if (nvme.r_awaits.length > 0) {
+										output += ', ';
+										for (const nvme_r_await of nvme.r_awaits) {
+											output += \`延迟 \${colorizeIoLatency(nvme_r_await)}\`;
+										}
+									}
+								}
 
-                            if (nvme.w_kBs.length > 0 || nvme.w_awaits.length > 0) {
-                                if (nvme.r_kBs.length > 0 || nvme.r_awaits.length > 0) {
-                                    output += ' / ';
-                                }
-                                output += '写-';
-                                if (nvme.w_kBs.length > 0) {
-                                    for (const nvme_w_kB of nvme.w_kBs) {
-                                        var nvme_w_mB = \`\${nvme_w_kB}\` / 1024;
-                                        nvme_w_mB = nvme_w_mB.toFixed(2);
-                                        output += \`速度 \${colorizeIoSpeed(nvme_w_mB)}\`;
-                                    }
-                                }
-                                if (nvme.w_awaits.length > 0) {
-                                    output += ', ';
-                                    for (const nvme_w_await of nvme.w_awaits) {
-                                        output += \`延迟 \${colorizeIoLatency(nvme_w_await)}\`;
-                                    }
-                                }
-                            }
-                        }
+								if (nvme.w_kBs.length > 0 || nvme.w_awaits.length > 0) {
+									if (nvme.r_kBs.length > 0 || nvme.r_awaits.length > 0) {
+										output += ' / ';
+									}
+									output += '写-';
+									if (nvme.w_kBs.length > 0) {
+										for (const nvme_w_kB of nvme.w_kBs) {
+											var nvme_w_mB = \`\${nvme_w_kB}\` / 1024;
+											nvme_w_mB = nvme_w_mB.toFixed(2);
+											output += \`速度 \${colorizeIoSpeed(nvme_w_mB)}\`;
+										}
+									}
+									if (nvme.w_awaits.length > 0) {
+										output += ', ';
+										for (const nvme_w_await of nvme.w_awaits) {
+											output += \`延迟 \${colorizeIoLatency(nvme_w_await)}\`;
+										}
+									}
+								}
+							} 
+						}
 
                         if (nvme.Cycles.length > 0) {
-                            output += '<br>';
-                            output += iconClock(palette.text) + label('通电') + ': ';
+                            output += ' | ';
                             for (const nvmeCycle of nvme.Cycles) {
-                                output += muted(nvmeCycle.replace(/ |,/gm, '')) + '次';
+                                output += \`通电: \${nvmeCycle.replace(/ |,/gm, '')}次\`;
                             }
 
                             if (nvme.Shutdowns.length > 0) {
-                                output += ', ';
+                                output += ' | ';
                                 for (const nvmeShutdown of nvme.Shutdowns) {
-                                    output += label('不安全断电') + ' ' + muted(nvmeShutdown.replace(/ |,/gm, '')) + '次';
+                                    output += \`不安全断电\${nvmeShutdown.replace(/ |,/gm, '')}次\`;
                                     break
                                 }
                             }
 
                             if (nvme.Hours.length > 0) {
-                                output += ', ';
+                                output += ' | ';
                                 for (const nvmeHour of nvme.Hours) {
-                                    output += label('累计') + ' ' + muted(nvmeHour.replace(/ |,/gm, '')) + '小时';
+                                    let hours = parseInt(nvmeHour.replace(/ |,/gm, ''));
+                                    let days = Math.floor(hours / 24);
+                                    output += '累计: ' + days + '天';
                                 }
                             }
                         }
@@ -959,126 +745,6 @@ EOF
     done
 done
 
-cat >> "$tmpf2" << 'EOF'
-        {
-            itemId: 'sata_status',
-            colspan: 2,
-            printBar: false,
-            title: gettext('SATA硬盘'),
-            textField: 'sata_status',
-            renderer: function(value) {
-                const palette = {
-                    low: '#3A7D6A',
-                    mid: '#C28B2C',
-                    high: '#C45B5B',
-                    text: '#4B5563',
-                    muted: '#6B7280'
-                };
-                const sep = '<span style="color:#9CA3AF;"> | </span>';
-                function iconDisk(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><rect x="2" y="3" width="12" height="10" rx="2"/><circle cx="11" cy="8" r="1"/></svg>`;
-                }
-                function iconThermo(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><path d="M9 3a2 2 0 0 0-4 0v6a3 3 0 1 0 4 0V3z"/><path d="M7 6v4"/></svg>`;
-                }
-                function iconClock(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>`;
-                }
-                function iconShield(color) {
-                    return `<svg viewBox="0 0 16 16" style="width:14px;height:14px;stroke:${color};fill:none;stroke-width:1.6;vertical-align:-2px;margin-right:4px"><path d="M8 2l5 2v4c0 3-2.2 4.8-5 6-2.8-1.2-5-3-5-6V4l5-2z"/></svg>`;
-                }
-                function label(text) {
-                    return `<span style="color:${palette.text}; font-weight:600;">${text}</span>`;
-                }
-                function muted(text) {
-                    return `<span style="color:${palette.muted}; font-weight:600;">${text}</span>`;
-                }
-                function colorizeHddTemp(temp) {
-                    const tempNum = parseFloat(temp);
-                    if (tempNum < 40) return `<span style="color:${palette.low}; font-weight:600;">${temp}°C</span>`;
-                    if (tempNum < 50) return `<span style="color:${palette.mid}; font-weight:600;">${temp}°C</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">${temp}°C</span>`;
-                }
-                function colorizeSmart(passed) {
-                    if (passed) return `<span style="color:${palette.low}; font-weight:600;">正常</span>`;
-                    return `<span style="color:${palette.high}; font-weight:600;">警告!</span>`;
-                }
-                if (value.length > 0) {
-                try {
-                const jsonData = JSON.parse(value);
-                if (jsonData.standy === true) {
-                return '休眠中';
-                }
-                let output = '';
-                if (jsonData.model_name) {
-                output = `${iconDisk(palette.text)}${label(jsonData.model_name)}<br>`;
-                        if (jsonData.temperature?.current !== undefined) {
-                        output += `${iconThermo(palette.text)}${label('温度')}: ${colorizeHddTemp(jsonData.temperature.current)}`;
-                        }
-                        if (jsonData.power_on_time?.hours !== undefined) {
-                        if (output.length > 0) output += sep;
-                        output += `${iconClock(palette.text)}${label('通电')}: ${muted(jsonData.power_on_time.hours)}小时`;
-                        if (jsonData.power_cycle_count) {
-                        output += `, ${label('次数')}: ${muted(jsonData.power_cycle_count)}`;
-                        }
-                        }
-                        if (jsonData.smart_status?.passed !== undefined) {
-                        if (output.length > 0) output += sep;
-                        output += `${iconShield(palette.text)}${label('SMART')}: ${colorizeSmart(jsonData.smart_status.passed)}`;
-                        }
-                        return output;
-                        }
-                        } catch (e) {
-                        }
-                        let outputs = [];
-                        let devices = value.matchAll(/(\s*(Model|Device Model|Vendor).*:\s*[\s\S]*?\n){1,2}^User.*\[([\s\S]*?)\]\n^\s*9[\s\S]*?\-\s*([\d]+)[\s\S]*?(\n(^19[0,4][\s\S]*?$){1,2}|\s{0}$)/gm);
-                        for (const device of devices) {
-                        let devicemodel = '';
-                        if (device[1].indexOf("Family") !== -1) {
-                        devicemodel = device[1].replace(/.*Model Family:\s*([\s\S]*?)\n^Device Model:\s*([\s\S]*?)\n/m, '$1 - $2');
-                        } else if (device[1].match(/Vendor/)) {
-                        devicemodel = device[1].replace(/.*Vendor:\s*([\s\S]*?)\n^.*Model:\s*([\s\S]*?)\n/m, '$1 $2');
-                        } else {
-                        devicemodel = device[1].replace(/.*(Model|Device Model):\s*([\s\S]*?)\n/m, '$2');
-                        }
-                        let capacity = device[3] ? device[3].replace(/ |,/gm, '') : "未知容量";
-                        let powerOnHours = device[4] || "未知";
-                        let deviceOutput = '';
-                        if (value.indexOf("Min/Max") !== -1) {
-                        let devicetemps = device[6]?.matchAll(/19[0,4][\s\S]*?\-\s*(\d+)(\s\(Min\/Max\s(\d+)\/(\d+)\)$|\s{0}$)/gm);
-                        for (const devicetemp of devicetemps || []) {
-                            deviceOutput = `${iconDisk(palette.text)}${label(devicemodel)}<br>${label('容量')}: ${muted(capacity)}${sep}${label('已通电')}: ${muted(powerOnHours)}小时${sep}${iconThermo(palette.text)}${label('温度')}: ${colorizeHddTemp(devicetemp[1])}`;
-                            outputs.push(deviceOutput);
-                        }
-                        } else if (value.indexOf("Temperature") !== -1 || value.match(/Airflow_Temperature/)) {
-                        let devicetemps = device[6]?.matchAll(/19[0,4][\s\S]*?\-\s*(\d+)/gm);
-                        for (const devicetemp of devicetemps || []) {
-                        deviceOutput = `${iconDisk(palette.text)}${label(devicemodel)}<br>${label('容量')}: ${muted(capacity)}${sep}${label('已通电')}: ${muted(powerOnHours)}小时${sep}${iconThermo(palette.text)}${label('温度')}: ${colorizeHddTemp(devicetemp[1])}`;
-                        outputs.push(deviceOutput);
-                        }
-                        } else {
-                        if (value.match(/\/dev\/sd[a-z]/)) {
-                            deviceOutput = `${iconDisk(palette.text)}${label(devicemodel)}<br>${label('容量')}: ${muted(capacity)}${sep}${label('已通电')}: ${muted(powerOnHours)}小时${sep}${label('提示')}: 设备存在但未报告温度信息`;
-                            outputs.push(deviceOutput);
-                        } else {
-                            deviceOutput = `${iconDisk(palette.text)}${label(devicemodel)}<br>${label('容量')}: ${muted(capacity)}${sep}${label('已通电')}: ${muted(powerOnHours)}小时${sep}${label('提示')}: 未检测到温度传感器`;
-                            outputs.push(deviceOutput);
-                        }
-                        }
-                        }
-                        if (!outputs.length && value.length > 0) {
-                        let fallbackDevices = value.matchAll(/(\/dev\/sd[a-z]).*?Model:([\s\S]*?)\n/gm);
-                        for (const fallbackDevice of fallbackDevices || []) {
-                            outputs.push(`${fallbackDevice[2].trim()}<br>提示: 设备存在但无法获取完整信息`);
-                        }
-                        }
-                        return outputs.length ? outputs.join('<br>') : '提示: 检测到硬盘但无法识别详细信息';
-                    } else {
-                        return '提示: 未安装 SATA硬盘 或已直通 SATA控制器!';
-                }
-            }
-        },
-EOF
 
 # 计算插入行号
 ln=$(sed -n '/pveversion/,+10{/},/{=;q}}' $pvemanagerlib)
@@ -1087,7 +753,8 @@ ln=$(sed -n '/pveversion/,+10{/},/{=;q}}' $pvemanagerlib)
 if ! [[ "$ln" =~ ^[0-9]+$ ]]; then
     echo "⛔ 在 $pvemanagerlib 中计算插入位置失败, 操作终止!"
     rm -f "$tmpf2"
-    echo -e "⚠️ 锚点'pveversion', 文件可能已更新或与当前版本不兼容\n" && exit 1
+    echo -e "⚠️ 锚点'pveversion', 文件可能已更新或与当前版本不兼容"
+    echo && exit 1
 fi
 
 # 应用更改
@@ -1099,72 +766,198 @@ if grep -q "itemId: 'cpupower'" "$pvemanagerlib"; then
 else
     echo "⛔ 检查对 $pvemanagerlib 添加的内容未生效!"
     rm -f "$tmpf2"
-    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
+    echo -e "⚠️ 请检查文件权限或手动检查文件内容"
+    echo && exit 1
 fi
 
 rm -f "$tmpf2"
 
 
 
+# 强制概要页面监控信息右对齐
+patch_widgets=(
+    "widget.pveDcGuests"
+    "widget.pveNodeStatus"
+)
+
+for widget_alias in "${patch_widgets[@]}"; do
+    # 寻找起始行
+    start_line=$(sed -n "/$widget_alias/=" "$pvemanagerlib" | head -n1)
+
+    [ -z "$start_line" ] && echo "错误: 修补点不存在 ($widget_alias) ⛔ " && continue
+
+    # 在目标后20行内寻找关键字
+    rel_line=$(sed -n "$((start_line)),+$((20))p" "$pvemanagerlib" \
+        | sed -n "/width: '100%'/=" \
+        | head -n1)
+
+    [ -z "$rel_line" ] && echo "错误: 未找到关键字 ($widget_alias) ⛔ " && continue
+
+    target_line=$((start_line + rel_line - 1))
+
+    # 检查是否已经存在
+    next_line=$(sed -n "$((target_line+1))p" "$pvemanagerlib")
+
+    if echo "$next_line" | grep -q "^[[:space:]]*textAlign: 'right',"; then
+        echo "警告: 修补点已存在 ($widget_alias) ⚠️"
+        continue
+    fi
+
+    # 插入更改
+    sed -i "${target_line}a\\$(sed -n "${target_line}s/^\([[:space:]]*\).*/\1/p" "$pvemanagerlib")textAlign: 'right'," "$pvemanagerlib"
+
+done
+
+echo && sleep 0.5
+
 ####################   zh-CN 本地化   ####################
 
-echo -e "\n🌏 添加缺失的 zh-CN 翻译..."
+echo -e "🌏 正在完善 zh-CN 中文本地化:"
 
 pve_major_ver=$(echo "$pvever" | cut -d'.' -f1)
+pve_i18n_CN="/usr/share/pve-i18n/pve-lang-zh_CN.js"
 
 case "$pve_major_ver" in
     "8")
-        # PVE 8.x: 为 Network traffic 图表添加中文 fieldTitles
-        if ! grep -q "fields: \['netin', 'netout'\]" "$pvemanagerlib"; then
-            echo -e "⛔ 未找到 Network traffic 的锚点, 操作终止!"
-            echo -e "⚠️ 锚点 \"fields: ['netin', 'netout']\", 文件可能已更新或与当前版本不兼容\n" && exit 1
-        else
-            if grep -q "fieldTitles: \[gettext('传入'), gettext('发送')\]" "$pvemanagerlib"; then
-                echo -e "Network traffic 的中文翻译已存在, 跳过该步骤 ➡️"
-            else
-                sed -i "s/^\( *\)fields: \['netin', 'netout'\],/&\n\1fieldTitles: [gettext('传入'), gettext('发送')],/" "$pvemanagerlib"
-                if grep -q "fieldTitles: \[gettext('传入'), gettext('发送')\]" "$pvemanagerlib"; then
-                    echo -e "已添加 PVE 8.x 缺失的翻译: 网络流量 图表上的 (传入)和(发送)按钮 ✅"
-                else
-                    echo -e "⛔ 检查对 Network traffic 部分的中文 fieldTitles 修改未生效!"
-                    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
-                fi
-            fi
-        fi
+        # PVE 8: 添加缺失的中文翻译项目
+        echo -e "正在检查并补全 PVE 8 缺失的中文翻译..."
 
-        # PVE 8.x: 为 Disk IO 图表添加中文 fieldTitles
-        if ! grep -q "fields: \['diskread', 'diskwrite'\]" "$pvemanagerlib"; then
-            echo -e "⛔ 未找到 Disk IO 的锚点, 操作终止!"
-            echo -e "⚠️ 锚点 \"fields: ['diskread', 'diskwrite']\", 文件可能已更新或与当前版本不兼容\n" && exit 1
-        else
-            if grep -q "fieldTitles: \[gettext('读取'), gettext('写入')\]" "$pvemanagerlib"; then
-                echo -e "Disk IO 的中文翻译已存在, 跳过该步骤 ➡️"
+        PVE8_TRANSLATIONS=(
+            '"599449289":["传入"]'
+            '"669411099":["发送"]'
+        )
+
+        # 前置锚点检查
+        if ! grep -q "^__proxmox_i18n_msgcat__ =" "$pve_i18n_CN"; then
+            echo -e "⛔ 未找到翻译字典中的锚点 (__proxmox_i18n_msgcat__ =), 操作终止!"
+            echo -e "⚠️ 文件可能已更新或与当前版本不兼容."
+            echo && exit 1
+        fi
+        
+        # 开始逐条处理翻译项目
+        for item in "${PVE8_TRANSLATIONS[@]}"; do
+            # 提取哈希值作为唯一检查标识
+            hash_id=$(echo "$item" | cut -d'"' -f2)
+            # 提取中文翻译文本用于日志输出
+            zh_text=$(echo "$item" | cut -d'"' -f4)
+
+            # 首先检查哈希值在字典中是否已经存在
+            if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                echo -e "已存在 PVE 8 中缺失的中文翻译: [$hash_id] => $zh_text ➡️"
             else
-                sed -i "s/^\( *\)fields: \['diskread', 'diskwrite'\],/&\n\1fieldTitles: [gettext('读取'), gettext('写入')],/" "$pvemanagerlib"
-                if grep -q "fieldTitles: \[gettext('读取'), gettext('写入')\]" "$pvemanagerlib"; then
-                    echo -e "已添加 PVE 8.x 缺失的翻译: 磁盘IO 图表上的 (读取)和(写入)按钮 ✅"
+                # 开始执行单次插入
+                # 在 }; 前插入一个逗号, 加上当前项目后再闭合 };
+                sed -i "/^__proxmox_i18n_msgcat__ =/ s/};$/,${item}\};/" "$pve_i18n_CN"
+                
+                # 完成后验证插入结果
+                if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                    echo -e "已添加 PVE 8 中缺失的中文翻译: [$hash_id] => $zh_text ✅"
                 else
-                    echo -e "⛔ 检查对 Disk IO 部分的中文 fieldTitles 修改未生效!"
-                    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
+                    echo -e "未生效 PVE 8 中缺失的中文翻译: [$hash_id] => $zh_text ⛔"
                 fi
             fi
-        fi
+        done
+
+        # PVE 8: 补全缺失的fieldTitles
+        patch_titles=(
+            "netin netout|Incoming Outgoing"
+            "diskread diskwrite|Reads Writes"
+        )
+
+        for item in "${patch_titles[@]}"; do
+            IFS='|' read -r fields_en titles_en <<< "$item"
+            read -r f1 f2 <<< "$fields_en"
+            read -r t1 t2 <<< "$titles_en"
+
+            fields_anchor="fields: ['$f1', '$f2']"
+            titles_insert="fieldTitles: [gettext('$t1'), gettext('$t2')]"
+
+            fields_label="$f1/$f2"
+
+            # 前置锚点检查
+            if ! grep -Fq "$fields_anchor" "$pvemanagerlib"; then
+                echo -e "⛔ 未找到 $fields_label 的锚点, 操作终止!"
+                echo -e "⚠️ 锚点 \"fields: ['$f1', '$f2']\", 文件可能已更新或与当前版本不兼容."
+                echo && exit 1
+            fi
+
+            # 检查fieldTitles在文件中是否已经存在
+            if grep -Fq "$titles_insert" "$pvemanagerlib"; then
+                echo -e "$fields_label 图表按钮的中文翻译已被修正, 跳过该步骤 ➡️"
+                continue
+            fi
+
+            # 执行插入操作
+            sed -i "s/^\([[:space:]]*\)fields: \['$f1', '$f2'\],/&\n\1$titles_insert,/" "$pvemanagerlib"
+
+            # 完成后验证插入结果
+            if grep -Fq "$titles_insert" "$pvemanagerlib"; then
+                echo -e "已添加 PVE 8 中缺失的字段标题: $fields_label => $t1/$t2 ✅"
+            else
+                echo -e "未生效 PVE 8 中缺失的字段标题: $fields_label => $t1/$t2 ⛔"
+            fi
+        done
         ;;
     "9")
-        echo -e "PVE 9.X 的 zh-CN 本地化将在未来的版本中支持, 跳过该步骤 ➡️"
+        # PVE 9: 添加缺失的中文翻译项目
+        echo -e "正在检查并补全 PVE 9 缺失的中文翻译..."
+
+        PVE9_TRANSLATIONS=(
+            '"1208454600":["平均值"]'
+            '"1653956129":["最大值"]'
+            '"871356310":["服务器负载"]'
+            '"1299201244":["网络流量"]'
+            '"755456338":["CPU 压力停滞"]'
+            '"858045066":["IO 压力停滞"]'
+            '"431218371":["内存压力停滞"]'
+            '"1102487829":["内存使用率"]'
+            '"517429357":["主机内存使用量"]'
+            '"1075229421":["主机内存使用量"]'
+        )
+
+        # 全局前置检查：确保翻译字典的锚点行确实存在
+        if ! grep -q "^__proxmox_i18n_msgcat__ =" "$pve_i18n_CN"; then
+            echo -e "⛔ 未找到翻译字典中的锚点 (__proxmox_i18n_msgcat__ =), 操作终止!"
+            echo -e "⚠️ 文件可能已更新或与当前版本不兼容."
+            echo && exit 1
+        fi
+        
+        # 开始逐条处理翻译项目
+        for item in "${PVE9_TRANSLATIONS[@]}"; do
+            # 提取哈希值作为唯一检查标识
+            hash_id=$(echo "$item" | cut -d'"' -f2)
+            # 提取中文翻译文本用于日志输出
+            zh_text=$(echo "$item" | cut -d'"' -f4)
+
+            # 首先检查哈希值在字典中是否已经存在
+            if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                echo -e "已存在 PVE 9 中缺失的中文翻译: [$hash_id] => $zh_text ➡️"
+            else
+                # 开始执行单次插入
+                # 在 }; 前插入一个逗号, 加上当前项目后再闭合 };
+                sed -i "/^__proxmox_i18n_msgcat__ =/ s/};$/,${item}\};/" "$pve_i18n_CN"
+                
+                # 完成后验证插入结果
+                if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                    echo -e "已添加 PVE 9 中缺失的中文翻译: [$hash_id] => $zh_text ✅"
+                else
+                    echo -e "未生效 PVE 9 中缺失的中文翻译: [$hash_id] => $zh_text ⛔"
+                fi
+            fi
+        done
         ;;
     *)
-        echo -e "\n⚠️ 不支持的PVE版本($pvever), 跳过 zh-CN 本地化."
+        echo -e "⚠️ 不支持的PVE版本 ($pvever) 跳过 zh-CN 本地化."
         ;;
 esac
 
-
+echo && sleep 0.5
 
 ####################   调整页面高度   ####################
 
-echo -e "\n🎚️ 调整修改后的页面高度..."
+echo -e "🎚️ 正在动态调整修改后的页面高度:"
 
-# 基于模型: 每行内容 17px, 每个模块段落间额外 7px 间距
+# 基于模型: 每行内容 15px, 每个模块段落间额外 5px 间距
 calculate_height_increase() {
     local total_lines=0
     local module_count=0
@@ -1187,37 +980,16 @@ calculate_height_increase() {
         total_lines=$((total_lines + sensor_core_lines))
     fi
 
-    # itemId:corefreq(核心频率): 无固定行
-    module_count=$((module_count + 1))
-    # 根据 /proc/cpuinfo 输出的线程数量计算额外行数
-    local thread_count=$(grep -c ^processor /proc/cpuinfo)
-    if [ "$thread_count" -gt 0 ]; then
-        local core_freq_lines=$(((thread_count + 4 - 1) / 4))
-        total_lines=$((total_lines + core_freq_lines))
-    fi
-
-    # itemId:nvme-status(NVMe硬盘): 固定4行每个
+    # itemId:nvme-status(NVMe硬盘): 固定2行每个
     local nvme_count=$(lsblk -d -o NAME | grep -c 'nvme[0-9]')
     if [ "$nvme_count" -gt 0 ]; then
-        local nvme_lines=$((nvme_count * 4))
+        local nvme_lines=$((nvme_count * 2))
         total_lines=$((total_lines + nvme_lines))
         module_count=$((module_count + nvme_count))
     fi
 
-    # itemId:sata_status(SATA硬盘): 无固定行
-    module_count=$((module_count + 1))
-    local sata_count=$(lsblk -d -o NAME | grep -c 'sd[a-z]')
-    if [ "$sata_count" -gt 0 ]; then
-        # 第1个SATA硬盘占2行, 后续每个占3行(含1行间距)
-        local sata_lines=$((2 + (sata_count - 1) * 3))
-        total_lines=$((total_lines + sata_lines))
-    else
-        # 不存在SATA硬盘时, 占用1行显示提示信息
-        total_lines=$((total_lines + 1))
-    fi
-
-    # 根据模型计算总高度增量: (行数 * 17px) + (模块数 * 7px)
-    local height_increase=$((total_lines * 17 + module_count * 7))
+    # 根据模型计算总高度增量: (行数 * 15px) + (模块数 * 5px)
+    local height_increase=$((total_lines * 15 + module_count * 5))
     echo $height_increase
 }
 
@@ -1225,22 +997,17 @@ calculate_height_increase() {
 height_increase=$(calculate_height_increase)
 
 # 基于基础高度(350px)计算新高度
-new_height=$((350 + height_increase))
+new_height=$((340 + height_increase))
 
 # 使用 sed 命令定位并更新 PVE.node.StatusView 的 height 属性
 sed -i -E "/Ext.define\('PVE.node.StatusView'/,/height:/{s/height: *[0-9]+,/height: $new_height,/}" "$pvemanagerlib"
 echo "页面高度经计算模型已动态调整为 ${new_height}px ✅"
 
-ln=$(expr $(sed -n -e '/widget.pveDcGuests/=' $pvemanagerlib) + 10)
-sed -i "${ln}a\ textAlign: 'right'," $pvemanagerlib
-ln=$(expr $(sed -n -e '/widget.pveNodeStatus/=' $pvemanagerlib) + 10)
-sed -i "${ln}a\ textAlign: 'right'," $pvemanagerlib
-
-
+echo && sleep 0.5
 
 ####################   修改全部完成后重启服务   ####################
 
-echo -e "\n🔁 等待服务 pveproxy.service 重启..."
+echo -e "🔁 等待服务 pveproxy.service 重启..."
 timeout 10s systemctl restart pveproxy.service &> /dev/null
 restart_status=$?
 if [ $restart_status -ne 0 ]; then
@@ -1254,4 +1021,4 @@ if [ $restart_status -ne 0 ]; then
     echo && exit 1
 fi
 
-echo -e "\n✅ 修改完成, 请使用 Ctrl + F5 刷新浏览器 Proxmox VE Web 管理页面缓存\n"
+echo -e "\n✅ 修改完成, 请使用 Ctrl + F5 刷新浏览器 Proxmox VE Web 管理页面缓存。可使用 apt install --reinstall pve-manager pve-i18n 恢复默认\n"
