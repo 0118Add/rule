@@ -1,6 +1,6 @@
-pr: &pr {type: select, url: https://www.gstatic.com/generate_204, interval: 300, lazy: false}
-select: &select {type: select, url: https://www.gstatic.com/generate_204, interval: 300, lazy: false, include-all: true}
-p: &p {type: http, interval: 86400, proxy: DIRECT, header: {User-Agent: ["clash-verge/v2.5.0"]}, health-check: {enable: true, url: https://www.gstatic.com/generate_204, interval: 300, lazy: false}}
+pr: &pr {type: select, proxies: [香港, 新加坡, 日本, 美国, 其他]}
+p: &p {type: http, interval: 86400, proxy: DIRECT, header: {User-Agent: ["clash-verge/v2.5.0"]}, health-check: {enable: true, url: "https://www.gstatic.com/generate_204", interval: 300, lazy: false}}
+check: &check {url: "https://www.gstatic.com/generate_204", interval: 300, lazy: false}
 
 proxy-providers:
   provider1:
@@ -9,22 +9,16 @@ proxy-providers:
     path: ./proxy_providers/provider1.yaml
 
 mixed-port: 7890
-redir-port: 7891
-tproxy-port: 7892
 log-level: error
 ipv6: true
-allow-lan: true
+allow-lan: false
 
-external-controller: "[::]:9090"
+external-controller: "127.0.0.1:9090"
 external-ui: ui
 external-ui-url: "https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip"
 
 unified-delay: false
 tcp-concurrent: true
-find-process-mode: off
-
-keep-alive-idle: 600
-keep-alive-interval: 15
 
 profile:
   store-selected: true
@@ -32,22 +26,18 @@ profile:
 
 tun:
   enable: true
-  stack: mixed
-  mtu: 9000
-  device: nikki
+  stack: system  # 如有问题可使用gvisor
+  mtu: 1500
   dns-hijack:
     - "udp://any:53"
     - "tcp://any:53"
   auto-route: true
-  auto-redirect: true
   auto-detect-interface: true
   disable-icmp-forwarding: true
 
 dns:
   enable: true
   ipv6: true
-  cache-algorithm: arc
-  listen: "[::]:1053"
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
@@ -59,31 +49,31 @@ dns:
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
   nameserver:
-    - https://dns.alidns.com/dns-query
+    - quic://dns.alidns.com
   nameserver-policy:
-    "rule-set:private": [system]
-    "rule-set:china-list,cn": [dns.alidns.com]
-    "rule-set:gfw": [https://dns.google/dns-query#代理]
+    "www.gstatic.com": ["system", "119.29.29.29"]
+    "rule-set:private": ["system"]
+    "rule-set:gfw": ["https://dns.google/dns-query#代理"]
+    "rule-set:china-list,cn": ["quic://dns.alidns.com"]
 
 hosts:
-  dns.alidns.com: [223.5.5.5, 223.6.6.6]
-  dns.google: [8.8.8.8, 8.8.4.4]
+  "dns.alidns.com": ["223.5.5.5", "223.6.6.6"]
+  "dns.google": ["8.8.8.8", "8.8.4.4"]
 
 proxy-groups:
-  - {name: 香港, <<: *select, filter: "(?i)香港|hk", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png"}
-  - {name: 新加坡, <<: *select, filter: "(?i)新加坡|sg", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Singapore.png"}
-  - {name: 日本, <<: *select, filter: "(?i)日本|jp", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png"}
-  - {name: 美国, <<: *select, filter: "(?i)美国|us", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png"}
-  - {name: 其他, <<: *select, exclude-filter: "(?i)剩余|到期|香港|hk|新加坡|sg|日本|jp|美国|us", icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Server.png"}
+  - {name: 香港, type: select, include-all: true, filter: "(?i)香港|hk", <<: *check, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Hong_Kong.png"}
+  - {name: 新加坡, type: select, include-all: true, filter: "(?i)新加坡|sg", <<: *check, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Singapore.png"}
+  - {name: 日本, type: select, include-all: true, filter: "(?i)日本|jp", <<: *check, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Japan.png"}
+  - {name: 美国, type: select, include-all: true, filter: "(?i)美国|us", <<: *check, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/United_States.png"}
+  - {name: 其他, type: select, include-all: true, exclude-filter: "(?i)剩余|到期|香港|hk|新加坡|sg|日本|jp|美国|us", <<: *check, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Server.png"}
 
-  - {name: 代理, <<: *pr, proxies: [香港, 新加坡, 日本, 美国, 其他], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png"}
-  - {name: AI, <<: *pr, proxies: [美国, 日本, 香港, 新加坡, 其他], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png"}
-  - {name: TG, <<: *pr, proxies: [香港, 新加坡, 日本, 美国, 其他], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram_X.png"}
-  - {name: GLOBAL, <<: *pr, proxies: [香港, 新加坡, 日本, 美国, 其他, 代理, AI, TG], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Global.png"}
+  - {name: 代理, <<: [*pr, *check], default-selected: 香港, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png"}
+  - {name: AI, <<: [*pr, *check], default-selected: 美国, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png"}
+  - {name: TG, <<: [*pr, *check], default-selected: 香港, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Telegram_X.png"}
 
 rules:
-  - AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,youtube)),REJECT  #屏蔽Youtube quic流量
-  - DOMAIN,abyss.cyapi.cn,REJECT  #彩云天气去广告(以下三条)
+  - AND,((NETWORK,UDP),(DST-PORT,443),(RULE-SET,youtube)),REJECT  # 屏蔽YouTube QUIC流量
+  - DOMAIN,abyss.cyapi.cn,REJECT  # 彩云天气去广告(以下三条)
   - DOMAIN,ad.cyapi.cn,REJECT
   - DOMAIN,gather.colorfulclouds.net,REJECT
   - RULE-SET,private,DIRECT
@@ -113,9 +103,13 @@ rule-providers:
     path: ./rule_providers/private_ip.mrs
     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs"
   ai:
-    <<: *domain
-    path: ./rule_providers/ai.mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.mrs"
+    type: http
+    interval: 86400
+    behavior: classical
+    format: yaml
+    proxy: 代理
+    path: ./rule_providers/ai.yaml
+    url: https://kelee.one/Tool/Clash/Rule/AI.yaml
   telegram:
     <<: *domain
     path: ./rule_providers/telegram.mrs
@@ -143,7 +137,7 @@ rule-providers:
   gfw:
     <<: *domain
     path: ./rule_providers/gfw.mrs
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.mrs"
+    url: "https://raw.githubusercontent.com/wwqgtxx/clash-rules/release/gfw.mrs"
   china-list:
     <<: *domain
     path: ./rule_providers/china-list.mrs
