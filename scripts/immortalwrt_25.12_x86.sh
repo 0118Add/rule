@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 1. 修改默认 IP
-sed -i '/lan)/s/192\.168\.[0-9.]*/192.168.100.253/' package/base-files/files/bin/config_generate
+sed -i '/lan)/s/192\.168\.[0-9.]*/10.0.0.1/' package/base-files/files/bin/config_generate
 
 # 2.移除要替换的包
 rm -rf feeds/luci/themes/luci-theme-argon
@@ -105,7 +105,7 @@ git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/ope
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
 # 添加Passwall 及其依赖
-#git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
+git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall12-luci
 # 添加ssrplus
