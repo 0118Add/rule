@@ -138,6 +138,8 @@ git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall
 # 添加istore
 #git_sparse_clone main https://github.com/linkease/istore-ui app-store-ui
 #git_sparse_clone main https://github.com/linkease/istore luci
+# 添加coremark
+git_sparse_clone master https://github.com/8688Add/openwrt_pkgs coremark
 # 特别注意：iStore 的目录在仓库里叫 luci，移动到 package 后我们给它改个名防止冲突
 #[ -d package/luci ] && mv package/luci package/luci-app-istore
 
