@@ -99,14 +99,14 @@ function git_sparse_clone() {
 # 添加Lucky
 #git clone --depth=1 -b main https://github.com/gdy666/luci-app-lucky package/lucky
 # 添加系统高级设置
-git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
+#git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
 # 添加kenzok8大鹅
 git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/openwrt-daede
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
 # 添加Passwall 及其依赖
-git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
-git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
+#git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
+#git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall12-luci
 # 添加ssrplus
 #git clone --depth=1 -b dev https://github.com/fw876/helloworld.git package/helloworld
@@ -119,14 +119,14 @@ git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall
 # 添加壁虎合集
 #git clone --depth=1 -b main https://github.com/free-diy/all-proxy package/all-proxy
 # 添加nikki
-git clone --depth=1 -b main https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki
+#git clone --depth=1 -b main https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki
 #git_sparse_clone main https://github.com/nikkinikki-org/OpenWrt-nikki luci-app-nikki mihomo-meta nikki
 # 添加openclash
-git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
+#git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 # 添加taskplan定时设置插件
-git_sparse_clone main https://github.com/sirpdboy/luci-app-taskplan luci-app-taskplan
+#git_sparse_clone main https://github.com/sirpdboy/luci-app-taskplan luci-app-taskplan
 # 添加设备关机功能
-git_sparse_clone master https://github.com/sirpdboy/luci-app-poweroffdevice luci-app-poweroffdevice
+#git_sparse_clone master https://github.com/sirpdboy/luci-app-poweroffdevice luci-app-poweroffdevice
 # 添加istore
 #git_sparse_clone main https://github.com/linkease/istore-ui app-store-ui
 #git_sparse_clone main https://github.com/linkease/istore luci
