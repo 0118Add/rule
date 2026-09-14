@@ -108,6 +108,7 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 #git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
 # 添加kenzok8大鹅
 git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/openwrt-daede
+sed -i 's/daede/daed/g' package/openwrt-daede/luci-app-daede/root/usr/share/luci/menu.d/luci-app-daede.json
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
 # 添加Passwall 及其依赖
