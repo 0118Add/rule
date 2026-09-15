@@ -109,7 +109,6 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 #git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
 # 添加kenzok8大鹅
 git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/openwrt-daede
-sed -i 's/daede/daed/g' package/openwrt-daede/luci-app-daede/root/usr/share/luci/menu.d/luci-app-daede.json
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
 # 添加Passwall 及其依赖
@@ -131,6 +130,8 @@ git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall
 #git_sparse_clone main https://github.com/nikkinikki-org/OpenWrt-nikki luci-app-nikki mihomo-meta nikki
 # 添加openclash
 #git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
+# 添加partexp
+git clone https://github.com/sirpdboy/luci-app-partexp package/luci-app-partexp
 # 添加taskplan定时设置插件
 #git_sparse_clone main https://github.com/sirpdboy/luci-app-taskplan luci-app-taskplan
 # 添加设备关机功能
