@@ -131,7 +131,7 @@ git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall
 # 添加openclash
 #git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 # 添加partexp
-git clone https://github.com/sirpdboy/luci-app-partexp package/luci-app-partexp
+git clone https://github.com/sirpdboy/luci-app-partexp package/partexp
 # 添加taskplan定时设置插件
 #git_sparse_clone main https://github.com/sirpdboy/luci-app-taskplan luci-app-taskplan
 # 添加设备关机功能
