@@ -214,6 +214,7 @@ jobs:
         cd "${{ env.OPENWRT_PATH }}"
         mkdir -p $GITHUB_WORKSPACE/outputs
         find bin/targets -type f -name "${{ env.TARGET_PATTERN }}" ! -name "*.json" ! -name "*.manifest" -exec cp -v {} $GITHUB_WORKSPACE/outputs/ \;
+        find bin/targets -type f -name "*rootfs.tar.gz" -exec cp -v {} $GITHUB_WORKSPACE/outputs/ \;
         cd $GITHUB_WORKSPACE/outputs
         if [ -n "$(ls -A . 2>/dev/null)" ]; then
           sha256sum * > SHA256SUMS
