@@ -44,7 +44,7 @@ jobs:
           echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=v25.12.2" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/immortalwrt_25.12_x86.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=*generic-*.tar.gz" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/immortalwrt_25.12_x86.sh" >> $GITHUB_ENV
 
@@ -59,7 +59,7 @@ jobs:
           echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=openwrt-25.12" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/immortalwrt.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=*generic-*.tar.gz" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/immortalwrt.sh" >> $GITHUB_ENV
         fi
