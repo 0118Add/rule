@@ -118,7 +118,7 @@ jobs:
     - name: 7. 缓存管理 (CCache)
       uses: HiGarfield/cachewrtbuild@main
       with:
-        ccache: true
+        ccache: false
         mixkey: ${{ env.WEEK_ID }}-${{ env.REPO_BRANCH }}-${{ env.TARGET_ID }}
         prefix: ${{ env.OPENWRT_PATH }}
 
