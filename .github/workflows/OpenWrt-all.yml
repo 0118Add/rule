@@ -32,7 +32,7 @@ jobs:
 
     steps:
     - name: 1. 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
 
     - name: 2. 初始化设备环境变量
       run: |
@@ -223,7 +223,7 @@ jobs:
         fi
 
     - name: 11. 备份固件到 Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: steps.compile.outputs.status == 'success' && steps.organize.outputs.has_artifacts == 'true'
       with:
         name: OpenWrt_firmware_${{ env.TARGET_ID }}_${{ env.OWRT_REAL_VERSION }}
