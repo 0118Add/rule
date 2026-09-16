@@ -150,7 +150,7 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 
 # 替换autocore default-settings
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
-git_sparse_clone main https://github.com/8688Add/openwrt_pkgs default-settings
+git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
 
 # 添加 rtp2httpd
 #git_sparse_clone https://github.com/stackia/rtp2httpd/tree/main/openwrt-support/luci-app-rtp2httpd
