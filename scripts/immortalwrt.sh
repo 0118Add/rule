@@ -180,7 +180,7 @@ curl -fsSL https://raw.githubusercontent.com/0118Add/X86_64-Test/main/general/25
 #rm -rf package/helloworld/mihomo
 
 # Shortcut Forwarding Engine
-git clone https://$gitea/sbwml/shortcut-fe package/emortal/shortcut-fe
+git clone https://$gitea/sbwml/shortcut-fe package/shortcut-fe
 
 # Patch FireWall 4
 rm -rf package/network/config/firewall4/patches
@@ -208,20 +208,20 @@ curl -s $mirror/openwrt/patch/firewall4/nftables/0001-nftables-add-fullcone-expr
 curl -s $mirror/openwrt/patch/firewall4/nftables/0002-nftables-add-brcm-fullconenat-support.patch > package/network/utils/nftables/patches/0002-nftables-add-brcm-fullconenat-support.patch
 
 # FullCone module
-# rm -rf package/network/utils/fullconenat-nft
-# git clone https://$gitea/sbwml/nft-fullcone package/network/utils/fullconenat-nft
+#git clone https://github.com/8688Add/nft-fullcone package/nft-fullcone
+#git clone https://github.com/hubbylei/fullconenat-nft package/network/utils/fullconenat-nft
 
 # IPv6 NAT
-git clone https://$github/sbwml/packages_new_nat6 package/utils/nat6 -b openwrt-25.12
+git clone https://github.com/sbwml/packages_new_nat6 package/nat6 -b openwrt-25.12
 
 # natflow
-git clone https://$github/sbwml/package_new_natflow package/utils/natflow
+git_sparse_clone master https://github.com/QiuSimons/OpenWrt-Add openwrt-natflow
 
 # luci-app-firewall
-curl -s https://raw.githubusercontent.com/openwrt/luci/refs/heads/master/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js > customfeeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js
+curl -s https://raw.githubusercontent.com/openwrt/luci/refs/heads/master/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js > feeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js
 
 # Patch Luci add nft_fullcone/bcm_fullcone & shortcut-fe & natflow & ipv6-nat & custom nft command option
-pushd customfeeds/luci
+pushd feeds/luci
     curl -s $mirror/openwrt/patch/firewall4/luci-25.12/0001-luci-app-firewall-add-nft-fullcone-and-bcm-fullcone-.patch | patch -p1
     curl -s $mirror/openwrt/patch/firewall4/luci-25.12/0002-luci-app-firewall-add-shortcut-fe-option.patch | patch -p1
     curl -s $mirror/openwrt/patch/firewall4/luci-25.12/0003-luci-app-firewall-add-ipv6-nat-option.patch | patch -p1
