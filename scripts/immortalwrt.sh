@@ -11,7 +11,7 @@ sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=165535' packag
 # 2.移除要替换的包
 rm -rf package/emortal/autocore
 rm -rf package/emortal/automount
-rm -rf package/emortal/default-settings
+#rm -rf package/emortal/default-settings
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-dockerman
