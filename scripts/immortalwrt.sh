@@ -110,7 +110,7 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 # 添加系统高级设置
 #git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
 # 添加kenzok8大鹅
-git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/openwrt-daede
+git clone https://github.com/kenzok8/openwrt-daede package/openwrt-daede
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
 # 添加Passwall 及其依赖
