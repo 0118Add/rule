@@ -11,7 +11,7 @@ sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=165535' packag
 # 2.移除要替换的包
 rm -rf package/emortal/autocore
 rm -rf package/emortal/automount
-#rm -rf package/emortal/default-settings
+rm -rf package/emortal/default-settings
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-dockerman
@@ -146,7 +146,7 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 
 # 替换autocore default-settings
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
-#git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
+git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
 
 # 添加 rtp2httpd
 #git_sparse_clone https://github.com/stackia/rtp2httpd/tree/main/openwrt-support/luci-app-rtp2httpd
