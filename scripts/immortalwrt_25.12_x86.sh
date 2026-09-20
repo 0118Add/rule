@@ -9,6 +9,9 @@ sed -i 's/net.netfilter.nf_conntrack_max=.*/net.netfilter.nf_conntrack_max=65535
 sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=165535' package/base-files/files/etc/sysctl.conf
 
 # 2.移除要替换的包
+rm -rf package/emortal/autocore
+rm -rf package/emortal/automount
+rm -rf package/emortal/default-settings
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-dockerman
@@ -18,7 +21,6 @@ rm -rf feeds/luci/applications/luci-app-dae
 rm -rf feeds/packages/net/dae
 rm -rf feeds/luci/applications/luci-app-daed
 rm -rf feeds/packages/net/daed
-rm -rf package/emortal/automount
 #rm -rf feeds/packages/lang/golang
 rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
 #rm -rf feeds/luci/applications/luci-app-netdata
@@ -142,7 +144,11 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 # 特别注意：iStore 的目录在仓库里叫 luci，移动到 package 后我们给它改个名防止冲突
 #[ -d package/luci ] && mv package/luci package/luci-app-istore
 
-# 添加rtp2httpd
+# 替换autocore default-settings
+git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
+git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
+
+# 添加 rtp2httpd
 #git_sparse_clone https://github.com/stackia/rtp2httpd/tree/main/openwrt-support/luci-app-rtp2httpd
 #git_sparse_clone https://github.com/stackia/rtp2httpd/tree/main/openwrt-support/rtp2httpd
 
@@ -159,6 +165,7 @@ sed -i 's/procd_set_param stderr 1/procd_set_param stderr 0/g' feeds/packages/ut
 
 sed -i 's/解除网易云音乐播放限制/音乐解锁/g' feeds/luci/applications/luci-app-unblockneteasemusic/root/usr/share/luci/menu.d/luci-app-unblockneteasemusic.json
 curl -fsSL https://raw.githubusercontent.com/0118Add/X86_64-Test/main/general/25_storage.js > ./feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/25_storage.js
+curl -fsSL https://raw.githubusercontent.com/immortalwrt/luci/master/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/29_ports.js > ./package/autocore/files/generic/29_ports.js
 # 7. 其他
 # 专门针对 advancedplus 的流氓逻辑进行清洗
 #if [ -f package/luci-app-advancedplus/root/etc/init.d/advancedplus ]; then
@@ -168,4 +175,3 @@ curl -fsSL https://raw.githubusercontent.com/0118Add/X86_64-Test/main/general/25
 # 8. 删除多余的插件
 #rm -rf package/all-proxy/mihomo
 #rm -rf package/helloworld/mihomo
-
