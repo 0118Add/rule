@@ -146,7 +146,26 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 
 # 替换autocore default-settings
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
-git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
+git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
+#git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
+# 1. 定义 zzz-default-settings 的相对路径（自动适配 lean 或其它目录结构）
+ZZZ_FILE=$(find package/ feeds/ -type f -name "zzz-default-settings" 2>/dev/null | head -n 1)
+
+if [ -n "$ZZZ_FILE" ]; then
+    echo "发现 zzz-default-settings 路径: $ZZZ_FILE"
+    
+    # 2. 精准删除包含 coremark 关键字的注释行、sed 行和 crontab 行
+    sed -i '/disable coremark/d' "$ZZZ_FILE"
+    sed -i '/sed -i.*coremark.*crontabs/d' "$ZZZ_FILE"
+    sed -i '/crontab \/etc\/crontabs\/root/d' "$ZZZ_FILE"
+    
+    # 3. 兜底清理：如果脚本中是以多行区间形式存在的，也可以用这一行确保将其抹去
+    sed -i '/coremark/,/crontabs\/root/d' "$ZZZ_FILE"
+
+    echo "=== 已成功从 zzz-default-settings 中移除 Coremark 相关逻辑 ==="
+else
+    echo "⚠️ 未找到 zzz-default-settings 文件，请检查源码目录结构"
+fi
 
 # 添加 rtp2httpd
 #git_sparse_clone https://github.com/stackia/rtp2httpd/tree/main/openwrt-support/luci-app-rtp2httpd
