@@ -146,7 +146,23 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 
 # 替换autocore default-settings
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
-git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
+git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
+
+# 定义zzz-default-settings路径
+ZZZ_FILE=$(find package/ feeds/ -type f -name "zzz-default-settings" 2>/dev/null | head -n 1)
+
+if [ -n "$ZZZ_FILE" ]; then
+    echo "发现 zzz-default-settings 路径: $ZZZ_FILE"
+    
+    sed -i '/disable coremark/d' "$ZZZ_FILE"
+    sed -i '/sed -i.*coremark.*crontabs/d' "$ZZZ_FILE"
+    sed -i '/crontab \/etc\/crontabs\/root/d' "$ZZZ_FILE"
+    sed -i '/coremark/,/crontabs\/root/d' "$ZZZ_FILE"
+
+    echo "=== 已成功从 zzz-default-settings 中移除 Coremark 相关逻辑 ==="
+else
+    echo "⚠️ 未找到 zzz-default-settings 文件，请检查源码目录结构"
+fi
 
 # 添加 rtp2httpd
 #git_sparse_clone https://github.com/stackia/rtp2httpd/tree/main/openwrt-support/luci-app-rtp2httpd
