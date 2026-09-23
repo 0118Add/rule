@@ -147,7 +147,7 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 # 替换autocore default-settings
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
-#git_sparse_clone master https://github.com/8688Add/openwrt_pkgs default-settings
+
 # 定义zzz-default-settings路径
 ZZZ_FILE=$(find package/ feeds/ -type f -name "zzz-default-settings" 2>/dev/null | head -n 1)
 
