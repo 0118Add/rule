@@ -6,14 +6,14 @@ on:
       target_device:
         description: '🎯 选择编译目标设备'
         required: true
-        default: 'x86_25'
+        default: 'openwrt'
         type: choice
         options:
           - 'x86_25.12-daede'
           - 'x86_25.12-clashoo'
-          - 'n60-pro_24'
           - 'openwrt'
-
+          - 'n60-pro_24'
+         
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -57,13 +57,6 @@ jobs:
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/immortalwrt_25.12.sh" >> $GITHUB_ENV
         
-        elif [[ "$ID" == "n60-pro_24" ]]; then
-          echo "REPO_URL=https://github.com/padavanonly/immortalwrt-mt798x-6.6" >> $GITHUB_ENV
-          echo "REPO_BRANCH=openwrt-24.10-6.6" >> $GITHUB_ENV
-          echo "CONFIG_FILE=configs/immortalwrt_24.10_netcore_n60-pro.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=*sysupgrade.bin" >> $GITHUB_ENV
-          echo "DIY_P2_SH=scripts/immortalwrt_24.10_netcore_n60-pro.sh" >> $GITHUB_ENV
-
         elif [[ "$ID" == "openwrt" ]]; then
           echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=master" >> $GITHUB_ENV
@@ -71,6 +64,13 @@ jobs:
           echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/immortalwrt.sh" >> $GITHUB_ENV
+        
+        elif [[ "$ID" == "n60-pro_24" ]]; then
+          echo "REPO_URL=https://github.com/padavanonly/immortalwrt-mt798x-6.6" >> $GITHUB_ENV
+          echo "REPO_BRANCH=openwrt-24.10-6.6" >> $GITHUB_ENV
+          echo "CONFIG_FILE=configs/immortalwrt_24.10_netcore_n60-pro.config" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*sysupgrade.bin" >> $GITHUB_ENV
+          echo "DIY_P2_SH=scripts/immortalwrt_24.10_netcore_n60-pro.sh" >> $GITHUB_ENV
         fi
 
     - name: 3. 空间清理与 I/O 优化
