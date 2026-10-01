@@ -21,6 +21,7 @@ rm -rf feeds/luci/applications/luci-app-dae
 rm -rf feeds/packages/net/dae
 rm -rf feeds/luci/applications/luci-app-daed
 rm -rf feeds/packages/net/daed
+rm -rf feeds/packages/utils/coremark
 #rm -rf feeds/packages/lang/golang
 rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
 #rm -rf feeds/luci/applications/luci-app-netdata
@@ -144,9 +145,10 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 # 特别注意：iStore 的目录在仓库里叫 luci，移动到 package 后我们给它改个名防止冲突
 #[ -d package/luci ] && mv package/luci package/luci-app-istore
 
-# 替换autocore default-settings
+# 替换autocore coremark default-settings
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
+git_sparse_clone master https://github.com/8688Add/openwrt_pkgs coremark
 
 # 定义zzz-default-settings路径
 ZZZ_FILE=$(find package/ feeds/ -type f -name "zzz-default-settings" 2>/dev/null | head -n 1)
