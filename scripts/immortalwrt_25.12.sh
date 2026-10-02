@@ -15,6 +15,7 @@ rm -rf package/emortal/default-settings
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-dockerman
+rm -rf feeds/luci/applications/luci-app-homeproxy
 rm -rf feeds/luci/applications/luci-app-openclash
 rm -rf feeds/luci/applications/luci-app-passwall
 rm -rf feeds/luci/applications/luci-app-dae
@@ -111,11 +112,15 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 # 添加系统高级设置
 #git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
 # 添加clashoo
-git clone --depth=1 -b main https://github.com/kenzok8/openwrt-clashoo package/openwrt-clashoo
+#git clone --depth=1 -b main https://github.com/kenzok8/openwrt-clashoo package/openwrt-clashoo
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
+# 添加homeproxy
+git clone --depth=1 -b master https://github.com/fun200/homeproxy_plus package/luci-app-homeproxy
 # 添加Passwall 及其依赖
 git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
+sed -i 's/PKG_VERSION:=.*/PKG_VERSION:=1.13.18/g' package/passwall-packages/sing-box/Makefile
+sed -i 's/PKG_HASH:=.*/PKG_HASH:=e41ed9d7adecd7597c1d5cc91818366a9538d94b41c244225ac40ac948c643f5/g' package/passwall-packages/sing-box/Makefile
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall12-luci
 # 添加ssrplus
@@ -129,7 +134,7 @@ git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall
 # 添加壁虎合集
 #git clone --depth=1 -b main https://github.com/free-diy/all-proxy package/all-proxy
 # 添加nikki
-#git clone --depth=1 -b main https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki
+git clone --depth=1 -b main https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki
 #git_sparse_clone main https://github.com/nikkinikki-org/OpenWrt-nikki luci-app-nikki mihomo-meta nikki
 # 添加openclash
 #git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
