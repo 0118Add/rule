@@ -116,13 +116,12 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 # 添加QiuSimons大鹅
 #git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
 # 添加homeproxy
-git clone --depth=1 -b master https://github.com/fun200/homeproxy_plus package/luci-app-homeproxy
+git_sparse_clone v5 https://github.com/sbwml/openwrt_helloworld sing-box luci-app-homeproxy
 sed -i "s/ImmortalWrt/OpenWrt/g" package/luci-app-homeproxy/po/zh_Hans/homeproxy.po
 sed -i "s/ImmortalWrt proxy/OpenWrt proxy/g" package/luci-app-homeproxy/htdocs/luci-static/resources/view/homeproxy/{client.js,server.js}
 # 添加Passwall 及其依赖
-git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
-sed -i 's/PKG_VERSION:=.*/PKG_VERSION:=1.13.18/g' package/passwall-packages/sing-box/Makefile
-sed -i 's/PKG_HASH:=.*/PKG_HASH:=e41ed9d7adecd7597c1d5cc91818366a9538d94b41c244225ac40ac948c643f5/g' package/passwall-packages/sing-box/Makefile
+git_sparse_clone main https://github.com/Openwrt-Passwall/openwrt-passwall-packages v2ray-geodata xray-core
+#git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall12-luci
 # 添加ssrplus
@@ -136,7 +135,7 @@ sed -i 's/PKG_HASH:=.*/PKG_HASH:=e41ed9d7adecd7597c1d5cc91818366a9538d94b41c2442
 # 添加壁虎合集
 #git clone --depth=1 -b main https://github.com/free-diy/all-proxy package/all-proxy
 # 添加nikki
-git clone --depth=1 -b main https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki
+git clone --depth=1 -b main https://github.com/YiXuanZX/OpenWrt-nikki package/OpenWrt-nikki
 #git_sparse_clone main https://github.com/nikkinikki-org/OpenWrt-nikki luci-app-nikki mihomo-meta nikki
 # 添加openclash
 #git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
