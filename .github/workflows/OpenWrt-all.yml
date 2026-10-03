@@ -265,7 +265,7 @@ jobs:
         if [ -n "$OLD_RELEASES" ]; then
           for rel in $OLD_RELEASES; do
             echo "🗑️ 正在尝试删除旧版本: $rel"
-            gh release delete "$rel" --yes --cleanup-tag || true
+            gh release delete "$rel" --yes --cleanup-tag || false
           done
           echo "✅ Release 清理完成"
         else
