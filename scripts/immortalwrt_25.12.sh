@@ -115,7 +115,9 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 # 添加clashoo
 #git clone --depth=1 -b main https://github.com/kenzok8/openwrt-clashoo package/openwrt-clashoo
 # 添加QiuSimons大鹅
-git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-dae package/openwrt-dae
+#git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-dae package/openwrt-dae
+git clone --depth=1 -b master https://github.com/QiuSimons/luci-app-honk package/openwrt-honk
+git clone https://github.com/QiuSimons/vmlinux-btf package/vmlinux-btf
 # 添加homeproxy
 git_sparse_clone v5 https://github.com/sbwml/openwrt_helloworld sing-box luci-app-homeproxy
 sed -i "s/ImmortalWrt/OpenWrt/g" package/luci-app-homeproxy/po/zh_Hans/homeproxy.po
