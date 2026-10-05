@@ -115,7 +115,7 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 # 添加clashoo
 #git clone --depth=1 -b main https://github.com/kenzok8/openwrt-clashoo package/openwrt-clashoo
 # 添加QiuSimons大鹅
-#git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
+git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-dae package/openwrt-dae
 # 添加homeproxy
 git_sparse_clone v5 https://github.com/sbwml/openwrt_helloworld sing-box luci-app-homeproxy
 sed -i "s/ImmortalWrt/OpenWrt/g" package/luci-app-homeproxy/po/zh_Hans/homeproxy.po
@@ -136,7 +136,7 @@ git_sparse_clone main https://github.com/Openwrt-Passwall/openwrt-passwall-packa
 # 添加壁虎合集
 #git clone --depth=1 -b main https://github.com/free-diy/all-proxy package/all-proxy
 # 添加nikki
-git clone --depth=1 -b main https://github.com/YiXuanZX/OpenWrt-nikki package/OpenWrt-nikki
+#git clone --depth=1 -b main https://github.com/YiXuanZX/OpenWrt-nikki package/OpenWrt-nikki
 #git_sparse_clone main https://github.com/nikkinikki-org/OpenWrt-nikki luci-app-nikki mihomo-meta nikki
 # 添加openclash
 #git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
