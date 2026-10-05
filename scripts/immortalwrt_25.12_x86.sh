@@ -112,11 +112,17 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 # 添加系统高级设置
 #git clone --depth=1 -b main https://github.com/free-diy/luci-app-advancedplus package/luci-app-advancedplus
 # 添加kenzok8大鹅
-git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/openwrt-daede
+#git clone --depth=1 -b main https://github.com/kenzok8/openwrt-daede package/openwrt-daede
 # 添加QiuSimons大鹅
-#git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-daed package/openwrt-daed
+git clone --depth=1 -b kix https://github.com/QiuSimons/luci-app-dae package/openwrt-dae
+git clone --depth=1 -b master https://github.com/QiuSimons/vmlinux-btf package/vmlinux-btf
+# 添加homeproxy
+git_sparse_clone v5 https://github.com/sbwml/openwrt_helloworld sing-box luci-app-homeproxy
+sed -i "s/ImmortalWrt/OpenWrt/g" package/luci-app-homeproxy/po/zh_Hans/homeproxy.po
+sed -i "s/ImmortalWrt proxy/OpenWrt proxy/g" package/luci-app-homeproxy/htdocs/luci-static/resources/view/homeproxy/{client.js,server.js}
 # 添加Passwall 及其依赖
-git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
+git_sparse_clone main https://github.com/Openwrt-Passwall/openwrt-passwall-packages v2ray-geodata xray-core
+#git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall12-luci
 # 添加ssrplus
