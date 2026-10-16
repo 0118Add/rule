@@ -155,7 +155,8 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 #[ -d package/luci ] && mv package/luci package/luci-app-istore
 
 # 替换autocore coremark default-settings
-git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
+git_sparse_clone openwrt-25.12 https://github.com/coolsnowwolf/luci luci-app-oui
+#git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
 git_sparse_clone master https://github.com/8688Add/openwrt_pkgs coremark
 
