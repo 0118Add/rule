@@ -9,7 +9,7 @@ sed -i 's/net.netfilter.nf_conntrack_max=.*/net.netfilter.nf_conntrack_max=65535
 sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=165535' package/base-files/files/etc/sysctl.conf
 
 # 2.移除要替换的包
-rm -rf package/emortal/autocore
+#rm -rf package/emortal/autocore
 rm -rf package/emortal/automount
 rm -rf package/emortal/default-settings
 rm -rf feeds/luci/themes/luci-theme-argon
@@ -27,6 +27,8 @@ rm -rf feeds/packages/utils/coremark
 #rm -rf feeds/packages/lang/golang
 rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
 #rm -rf feeds/luci/applications/luci-app-netdata
+rm -rf feeds/luci/modules/luci-base
+rm -rf feeds/luci/modules/luci-mod-status
 
 # 3. 增强版稀疏克隆函数 (参数1是分支名, 参数2是仓库地址, 参数3是子目录，同一个仓库下载多个文件夹直接在后面跟文件名或路径，空格分开)
 function git_sparse_clone() {
@@ -155,14 +157,18 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 #[ -d package/luci ] && mv package/luci package/luci-app-istore
 
 # 替换autocore coremark default-settings
-git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
+#git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
 git_sparse_clone master https://github.com/8688Add/openwrt_pkgs coremark
 
 # 克隆lean-luci仓库
-#git clone --depth=1 -b openwrt-25.12 https://github.com/coolsnowwolf/luci lean-luci
-#cp -rf lean-luci/applications/luci-app-oui feeds/luci/applications/luci-app-oui
-#ln -sf ../../../feeds/luci/applications/luci-app-oui ./package/feeds/luci/luci-app-oui
+git clone --depth=1 -b openwrt-25.12 https://github.com/coolsnowwolf/luci lean-luci
+cp -rf lean-luci/applications/luci-app-oui feeds/luci/applications/luci-app-oui
+ln -sf ../../../feeds/luci/applications/luci-app-oui ./package/feeds/luci/luci-app-oui
+cp -rf lean-luci/modules/luci-base feeds/luci/modules/luci-base
+ln -sf ../../../feeds/luci/modules/luci-base ./package/feeds/luci/luci-base
+cp -rf lean-luci/modules/luci-mod-status feeds/luci/modules/luci-mod-status
+ln -sf ../../../feeds/luci/modules/luci-mod-status ./package/feeds/luci/luci-mod-status
 
 # 定义zzz-default-settings路径
 ZZZ_FILE=$(find package/ feeds/ -type f -name "zzz-default-settings" 2>/dev/null | head -n 1)
