@@ -155,10 +155,14 @@ git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package
 #[ -d package/luci ] && mv package/luci package/luci-app-istore
 
 # 替换autocore coremark default-settings
-git_sparse_clone openwrt-25.12 https://github.com/coolsnowwolf/luci/applications luci-app-oui
 #git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/autocore-arm package/autocore
 git clone --depth=1 -b openwrt-25.12 https://github.com/sbwml/default-settings package/default-settings
 git_sparse_clone master https://github.com/8688Add/openwrt_pkgs coremark
+
+# 克隆lean-luci仓库
+git clone --depth=1 -b openwrt-25.12 https://github.com/coolsnowwolf/luci lean-luci
+cp -rf lean-luci/applications/luci-app-oui feeds/luci/applications/luci-app-oui
+ln -sf ../../../feeds/luci/applications/luci-app-oui ./package/feeds/luci/luci-app-oui
 
 # 定义zzz-default-settings路径
 ZZZ_FILE=$(find package/ feeds/ -type f -name "zzz-default-settings" 2>/dev/null | head -n 1)
