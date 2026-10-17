@@ -106,6 +106,9 @@ function git_sparse_clone() {
 # 4. 更新 golang 1.26 版本
 #git clone --depth=1 -b 26.x https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
+# 设置root用户密码为password
+sed -i 's/root:::0:99999:7:::/root:$1$V4UetPzk$CYXluq4wUazHjmCDBCqXF.::0:99999:7:::/g' package/base-files/files/etc/shadow
+
 # 5. 主题与常规插件
 # 添加dockerman主题
 git clone https://github.com/sbwml/luci-app-dockerman feeds/luci/applications/luci-app-dockerman
