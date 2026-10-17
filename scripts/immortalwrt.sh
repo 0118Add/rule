@@ -199,6 +199,10 @@ ln -sf ../../../feeds/luci/modules/luci-mod-status ./package/feeds/luci/luci-mod
 #完全删除luci版本
 #sed -i "s/+ ' \/ ' : '') + (luciversion ||/:/g" feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js
 
+# miniupnpd
+sed -i 's/PKG_VERSION:=.*/PKG_VERSION:=2.3.9/g' feeds/packages/net/miniupnpd/Makefile
+sed -i 's/PKG_HASH:=.*/PKG_HASH:=66cb3c3d697ab2bb3a61d3c48628166d6ba328d7c2dbeb95898fdf2a3202af7b/g' feeds/packages/net/miniupnpd/Makefile
+
 # ttyd
 sed -i '3 a\\t\t"order": 50,' feeds/luci/applications/luci-app-ttyd/root/usr/share/luci/menu.d/luci-app-ttyd.json
 sed -i 's/procd_set_param stdout 1/procd_set_param stdout 0/g' feeds/packages/utils/ttyd/files/ttyd.init
