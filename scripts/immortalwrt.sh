@@ -201,6 +201,7 @@ ln -sf ../../../feeds/luci/modules/luci-mod-status ./package/feeds/luci/luci-mod
 
 # miniupnpd
 sed -i 's/PKG_VERSION:=.*/PKG_VERSION:=2.3.9/g' feeds/packages/net/miniupnpd/Makefile
+sed -i 's/PKG_RELEASE:=.*/PKG_RELEASE:=3/g' feeds/packages/net/miniupnpd/Makefile
 sed -i 's/PKG_HASH:=.*/PKG_HASH:=66cb3c3d697ab2bb3a61d3c48628166d6ba328d7c2dbeb95898fdf2a3202af7b/g' feeds/packages/net/miniupnpd/Makefile
 
 # ttyd
