@@ -110,7 +110,14 @@ jobs:
 
     - name: 5. 克隆源码与环境准备
       run: |
-        git clone -b $REPO_BRANCH --single-branch --depth 1 $REPO_URL $OPENWRT_NAME
+        echo "⏳ 正在克隆仓库: $REPO_URL (分支: $REPO_BRANCH)..."
+        
+        # 使用 timeout 命令限制 5 分钟内必须完成，防止无限死卡
+        timeout 300 git clone -b $REPO_BRANCH --single-branch --depth 1 $REPO_URL $OPENWRT_NAME || {
+          echo "❌ 错误: 源码克隆超时或失败！可能是 GitHub 访问外部仓库网络不通或被限速。"
+          exit 1
+        }
+        
         echo "OPENWRT_PATH=${GITHUB_WORKSPACE}/${OPENWRT_NAME}" >> $GITHUB_ENV
         cd "$OPENWRT_NAME"
         echo "COMMIT_DATE=$(git show -s --date=short --format='%ci' | awk '{print $1}')" >> $GITHUB_ENV
