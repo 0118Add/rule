@@ -94,9 +94,9 @@ jobs:
         sudo apt-get remove -y needrestart || true
         
         sudo -E apt-get -qq update
-        DEPS=$(curl -fsSL https://raw.githubusercontent.com/0118Add/rule/main/depends_ubuntu || echo "")
+        DEPS=$(curl -fsSL https://raw.githubusercontent.com/free-diy/openwrt/main/depends_ubuntu || echo "")
         if [ -z "$DEPS" ]; then
-          DEPS="ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache clang cmake cpio curl device-tree-compiler dwarves ecj fastjar flex gawk gettext gcc-multilib g++-multilib git gnutls-dev golang-go gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev libbpf-dev libclang-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano ninja-build npm p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd"
+          DEPS="ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache clang cmake cpio curl device-tree-compiler dwarves ecj fastjar flex gawk gettext gcc-multilib g++-multilib git gnutls-dev golang-go gperf haveged help2man intltool lib32gcc-s1 libbpf-dev libc6-dev-i386 libclang-dev libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano ninja-build npm p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd"
         fi
 
         sudo -E apt-get -qq install -y --no-install-recommends \
@@ -134,7 +134,7 @@ jobs:
     - name: 7. 缓存管理 (CCache)
       uses: HiGarfield/cachewrtbuild@main
       with:
-        ccache: false
+        ccache: true
         mixkey: ${{ env.WEEK_ID }}-${{ env.REPO_BRANCH }}-${{ env.TARGET_ID }}
         prefix: ${{ env.OPENWRT_PATH }}
 
@@ -181,11 +181,11 @@ jobs:
         echo "CONFIG_CCACHE=y" >> .config
         make defconfig
         
-        echo "⏳ 正在尝试多线程下载 (j16)..."
-        if ! make download -j16; then
-          echo "⚠️ j16 失败，降级至 j8 重试..."
-          if ! make download -j8; then
-            echo "❌ j8 依然失败，进入单线程详细日志模式 (V=s)..."
+        echo "⏳ 正在尝试多线程下载 (j8)..."
+        if ! make download -j8; then
+          echo "⚠️ j8 失败，降级至 j4 重试..."
+          if ! make download -j4; then
+            echo "❌ j4依然失败，进入单线程详细日志模式 (V=s)..."
             make download -j1 V=s > download.log 2>&1 || {
               tail -n 500 download.log
               exit 1
@@ -203,6 +203,58 @@ jobs:
         echo "📊 dl 目录缓存体积前 5 排行:"
         (du -h dl/* 2>/dev/null | sort -rh | head -n 5) 2>/dev/null || echo "dl 目录为空"
         echo "=========================================="
+
+        # --- 整合 luci-app-honk 的宿主机编译环境依赖（支持大范围智能搜索） ---
+        echo "🔧 正在全局搜索并配置 luci-app-honk 所需的宿主机工具链..."
+        
+        # 1. 安装 Rust 环境（如果尚未安装）
+        if ! command -v rustup &> /dev/null; then
+          curl --retry 3 --retry-delay 2 --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+        fi
+        export PATH="$HOME/.cargo/bin:$PATH"
+        
+        # 2. 在全仓库范围内寻找 honk_toolchain.sh 脚本
+        HONK_TOOLCHAIN_PATH=""
+        for candidate in \
+          "package/luci-app-honk/honk_toolchain.sh" \
+          "package/luci-app-honk/honk/honk_toolchain.sh" \
+          "feeds/luci/applications/luci-app-honk/honk_toolchain.sh"; do
+          if [ -f "$candidate" ]; then
+            HONK_TOOLCHAIN_PATH="$candidate"
+            break
+          fi
+        done
+        
+        # 如果精准路径未命中，使用 find 进行全盘递归扫描
+        if [ -z "$HONK_TOOLCHAIN_PATH" ]; then
+          echo "🔍 常规路径未命中，正在全盘扫描 honk_toolchain.sh..."
+          HONK_TOOLCHAIN_PATH=$(find . -type f -name "honk_toolchain.sh" | head -n 1)
+        fi
+        
+        # 3. 如果找到了脚本，则自动执行并安装依赖
+        if [ -n "$HONK_TOOLCHAIN_PATH" ] && [ -f "$HONK_TOOLCHAIN_PATH" ]; then
+          HONK_DIR=$(dirname "$HONK_TOOLCHAIN_PATH")
+          echo "✅ 成功找到 honk 工具链脚本: $HONK_TOOLCHAIN_PATH (所在目录: $HONK_DIR)"
+          
+          # 执行解析脚本获取版本号
+          eval "$(bash "$HONK_TOOLCHAIN_PATH")"
+          
+          # 安装 bpf-linker
+          echo "📦 正在安装 bpf-linker v${BPF_LINKER_VERSION}..."
+          curl --retry 3 --retry-delay 2 -fsSL -o /tmp/bpf-linker.tar.zst "https://github.com/aya-rs/bpf-linker/releases/download/v${BPF_LINKER_VERSION}/bpf-linker-x86_64-unknown-linux-musl.tar.zst"
+          echo "${BPF_LINKER_SHA256}  /tmp/bpf-linker.tar.zst" | sha256sum -c -
+          sudo tar --zstd -xf /tmp/bpf-linker.tar.zst -C /usr/local/bin
+          
+          # 安装 Zig 编译器
+          echo "📦 正在安装 Zig v${ZIG_VERSION}..."
+          curl --retry 3 --retry-delay 2 -fsSL -o /tmp/zig.tar.xz "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+          sudo tar -xJf /tmp/zig.tar.xz -C /usr/local
+          sudo ln -sf "/usr/local/zig-x86_64-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig
+          echo "✅ honk 专用宿主机工具链安装完成！"
+        else
+          echo "⚠️ 全盘未检测到 honk_toolchain.sh 脚本，跳过专用工具链安装。"
+        fi
+        # ---------------------------------------------
 
     - name: 9. 开始编译
       id: compile
@@ -230,7 +282,6 @@ jobs:
         cd "${{ env.OPENWRT_PATH }}"
         mkdir -p $GITHUB_WORKSPACE/outputs
         find bin/targets -type f -name "${{ env.TARGET_PATTERN }}" ! -name "*.json" ! -name "*.manifest" -exec cp -v {} $GITHUB_WORKSPACE/outputs/ \;
-        find bin/targets -type f -name "*immortalwrt-x86-64-generic-rootfs.tar.gz" -exec cp -v {} $GITHUB_WORKSPACE/outputs/ \;
         cd $GITHUB_WORKSPACE/outputs
         if [ -n "$(ls -A . 2>/dev/null)" ]; then
           sha256sum * > SHA256SUMS
@@ -240,7 +291,7 @@ jobs:
         fi
 
     - name: 11. 备份固件到 Artifacts
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v4
       if: steps.compile.outputs.status == 'success' && steps.organize.outputs.has_artifacts == 'true'
       with:
         name: OpenWrt_firmware_${{ env.TARGET_ID }}_${{ env.OWRT_REAL_VERSION }}
