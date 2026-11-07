@@ -15,7 +15,7 @@ rm -rf package/emortal/default-settings
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
 rm -rf feeds/luci/applications/luci-app-dockerman
-rm -rf feeds/luci/applications/luci-app-homeproxy
+#rm -rf feeds/luci/applications/luci-app-homeproxy
 rm -rf feeds/luci/applications/luci-app-openclash
 rm -rf feeds/luci/applications/luci-app-microsocks
 rm -rf feeds/luci/applications/luci-app-passwall
@@ -119,11 +119,11 @@ sed -i 's/"admin/"admin\/services/g' feeds/luci/applications/luci-app-dockerman/
 git clone --depth=1 -b master https://github.com/QiuSimons/luci-app-honk package/openwrt-honk
 git clone https://github.com/QiuSimons/vmlinux-btf package/vmlinux-btf
 # 添加homeproxy
-git_sparse_clone v5 https://github.com/sbwml/openwrt_helloworld sing-box luci-app-homeproxy
-sed -i "s/ImmortalWrt/OpenWrt/g" package/luci-app-homeproxy/po/zh_Hans/homeproxy.po
-sed -i "s/ImmortalWrt proxy/OpenWrt proxy/g" package/luci-app-homeproxy/htdocs/luci-static/resources/view/homeproxy/{client.js,server.js}
+#git_sparse_clone v5 https://github.com/sbwml/openwrt_helloworld sing-box luci-app-homeproxy
+sed -i "s/ImmortalWrt/OpenWrt/g" feeds/luci/applications/luci-app-homeproxy/po/zh_Hans/homeproxy.po
+sed -i "s/ImmortalWrt proxy/OpenWrt proxy/g" feeds/luci/applications/luci-app-homeproxy/htdocs/luci-static/resources/view/homeproxy/{client.js,server.js}
 # 添加Passwall 及其依赖
-git_sparse_clone main https://github.com/Openwrt-Passwall/openwrt-passwall-packages v2ray-geodata xray-core
+git_sparse_clone main https://github.com/Openwrt-Passwall/openwrt-passwall-packages v2ray-geodata sing-box xray-core
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 #git clone --depth=1 -b main https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall12-luci
