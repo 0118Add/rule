@@ -47,7 +47,7 @@ jobs:
           echo "CONFIG_FILE=configs/immortalwrt_master.config" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
-          echo "DIY_P2_SH=scripts/immortalwrt_master" >> $GITHUB_ENV
+          echo "DIY_P2_SH=scripts/immortalwrt_master.sh" >> $GITHUB_ENV
 
         elif [[ "$ID" == "immortalwrt-25.12" ]]; then
           echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
