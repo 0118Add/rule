@@ -301,7 +301,7 @@ jobs:
       run: |
         cd "${{ env.OPENWRT_PATH }}"
         mkdir -p $GITHUB_WORKSPACE/outputs
-        find bin/targets/ -type f \( -name "*generic-rootfs.tar.gz" -o -name "*.img.gz" \) ! -name "*.json" ! -name "*.manifest" -exec cp -v {} "$GITHUB_WORKSPACE/outputs/" \;
+        find bin/targets/ -type f \( -name "*generic-rootfs.tar.gz" -o -name "*squashfs-combined-*.img.gz" \) ! -name "*.json" ! -name "*.manifest" -exec cp -v {} "$GITHUB_WORKSPACE/outputs/" \;
         cd "$GITHUB_WORKSPACE/outputs"
         if [ "$(ls -A . 2>/dev/null | wc -l)" -gt 0 ]; then
           sha256sum * > SHA256SUMS
