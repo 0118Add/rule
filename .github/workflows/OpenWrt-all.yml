@@ -12,8 +12,9 @@ on:
           - 'immortalwrt-master'
           - 'immortalwrt-25.12'
           - 'openwrt-main'
-          - 'n60-pro_24'
-         
+          - 'openwrt-25.12'
+          - 'lienol'       
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -73,13 +74,13 @@ jobs:
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/openwrt_25.12.sh" >> $GITHUB_ENV
         
-        elif [[ "$ID" == "openwrt" ]]; then
-          echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
-          echo "REPO_BRANCH=master" >> $GITHUB_ENV
-          echo "CONFIG_FILE=configs/immortalwrt.config" >> $GITHUB_ENV
+        elif [[ "$ID" == "lienol" ]]; then
+          echo "REPO_URL=https://github.com/Lienol/openwrt" >> $GITHUB_ENV
+          echo "REPO_BRANCH=25.12" >> $GITHUB_ENV
+          echo "CONFIG_FILE=configs/lienol.config" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
-          echo "DIY_P2_SH=scripts/immortalwrt.sh" >> $GITHUB_ENV
+          echo "DIY_P2_SH=scripts/lienol.sh" >> $GITHUB_ENV
         fi
 
     - name: 3. 空间清理与 I/O 优化
