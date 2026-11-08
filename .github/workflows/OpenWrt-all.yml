@@ -46,7 +46,7 @@ jobs:
           echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=master" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/immortalwrt_master.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=immortalwrt-x86-64-generic-rootfs.tar.gz" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/immortalwrt_master.sh" >> $GITHUB_ENV
 
@@ -54,7 +54,7 @@ jobs:
           echo "REPO_URL=https://github.com/immortalwrt/immortalwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=v25.12.2" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/immortalwrt_25.12.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=immortalwrt-x86-64-generic-rootfs.tar.gz" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/immortalwrt_25.12.sh" >> $GITHUB_ENV
         
@@ -62,7 +62,7 @@ jobs:
           echo "REPO_URL=https://github.com/openwrt/openwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=main" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/openwrt_main.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=openwrt-x86-64-generic-rootfs.tar.gz" >> $GITHUB_ENV
+         echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/openwrt_main.sh" >> $GITHUB_ENV
         
@@ -70,7 +70,7 @@ jobs:
           echo "REPO_URL=https://github.com/openwrt/openwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=v25.12.6" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/openwrt_25.12.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=openwrt-x86-64-generic-rootfs.tar.gz" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/openwrt_25.12.sh" >> $GITHUB_ENV
         
@@ -78,7 +78,7 @@ jobs:
           echo "REPO_URL=https://github.com/Lienol/openwrt" >> $GITHUB_ENV
           echo "REPO_BRANCH=25.12" >> $GITHUB_ENV
           echo "CONFIG_FILE=configs/lienol.config" >> $GITHUB_ENV
-          echo "TARGET_PATTERN=openwrt-x86-64-generic-rootfs.tar.gz" >> $GITHUB_ENV
+          echo "TARGET_PATTERN=*generic-rootfs.tar.gz" >> $GITHUB_ENV
           echo "TARGET_PATTERN=*squashfs-combined-*.img.gz" >> $GITHUB_ENV
           echo "DIY_P2_SH=scripts/lienol.sh" >> $GITHUB_ENV
         fi
@@ -301,9 +301,9 @@ jobs:
       run: |
         cd "${{ env.OPENWRT_PATH }}"
         mkdir -p $GITHUB_WORKSPACE/outputs
-        find bin/targets -type f -name "${{ env.TARGET_PATTERN }}" ! -name "*.json" ! -name "*.manifest" -exec cp -v {} $GITHUB_WORKSPACE/outputs/ \;
-        cd $GITHUB_WORKSPACE/outputs
-        if [ -n "$(ls -A . 2>/dev/null)" ]; then
+        find bin/targets/ -type f \( -name "*generic-rootfs.tar.gz" -o -name "*.img.gz" \) ! -name "*.json" ! -name "*.manifest" -exec cp -v {} "$GITHUB_WORKSPACE/outputs/" \;
+        cd "$GITHUB_WORKSPACE/outputs"
+        if [ "$(ls -A . 2>/dev/null | wc -l)" -gt 0 ]; then
           sha256sum * > SHA256SUMS
           echo "has_artifacts=true" >> $GITHUB_OUTPUT
         else
