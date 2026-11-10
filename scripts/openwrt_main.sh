@@ -93,6 +93,9 @@ function git_sparse_clone() {
   echo ">> 任务结束。"
 }
 
+# 设置root用户密码为password
+sed -i 's/root:::0:99999:7:::/root:$1$V4UetPzk$CYXluq4wUazHjmCDBCqXF.::0:99999:7:::/g' package/base-files/files/etc/shadow
+
 # golang 27.x
 git clone https://github.com/sbwml/packages_lang_golang -b 27.x feeds/packages/lang/golang
 
