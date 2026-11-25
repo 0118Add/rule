@@ -150,6 +150,10 @@ git_sparse_clone main https://github.com/Openwrt-Passwall/openwrt-passwall-packa
 git clone --depth=1 -b main https://github.com/sirpdboy/luci-app-partexp package/partexp
 # 预编译 node
 git clone --depth=1 -b packages-25.12 https://github.com/sbwml/feeds_packages_lang_node-prebuilt feeds/packages/lang/node/node
+# 添加FlowCone
+git clone https://github.com/QiuSimons/FlowCone package/FlowCone
+git clone https://github.com/muink/luci-app-natmapt package/luci-app-natmapt
+git clone https://github.com/muink/openwrt-natmapt package/natmapt
 # 添加taskplan定时设置插件
 #git_sparse_clone main https://github.com/sirpdboy/luci-app-taskplan luci-app-taskplan
 # 添加设备关机功能
