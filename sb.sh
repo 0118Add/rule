@@ -1,5 +1,10 @@
 #!/bin/sh
-# 仿 ShellCrash 架构的 reF1nd 版 sing-box 极简裸核管理脚本 (兼容 OpenWrt & Debian/Ubuntu)
+# 仿 ShellCrash 架构的 reF1nd 版 sing-box 极简裸核管理脚本 (内置 GitHub 加速)
+
+# ================= 配置区 =================
+# GitHub 加速前缀（末尾不要加斜杠；若在海外机器运行，将其留空 GH_PROXY="" 即可）
+GH_PROXY="https://gh-proxy.com"
+# ==========================================
 
 BASE_DIR="/etc/sb_ref1nd"
 BIN_PATH="$BASE_DIR/sing-box"
@@ -7,6 +12,16 @@ CONF_PATH="$BASE_DIR/config.json"
 SUB_FILE="$BASE_DIR/sub.url"
 
 mkdir -p "$BASE_DIR"
+
+# 构造带加速的 GitHub 完整链接
+gh_url() {
+    RAW_URL="$1"
+    if [ -n "$GH_PROXY" ]; then
+        echo "${GH_PROXY}/${RAW_URL}"
+    else
+        echo "${RAW_URL}"
+    fi
+}
 
 # 自动注册全局快捷命令 sb
 SELF_PATH=$(readlink -f "$0" 2>/dev/null || echo "$0")
@@ -36,9 +51,17 @@ install_ref1nd_core() {
     printf "请输入数字 [1-2，默认 1]: "
     read -r BRANCH_CHOICE
 
-    echo "🔍 正在检索 reF1nd 官方仓库最新版本号..."
-    RELEASES_HTML=$(curl -fsSL "https://github.com")
-    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查网络！"; return 1; }
+    echo "🔍 正在通过加速节点检索 reF1nd 最新版本号..."
+    RELEASES_URL=$(gh_url "https://github.com")
+    RELEASES_HTML=$(curl -fsSL --connect-timeout 10 "$RELEASES_URL")
+    
+    # 若加速节点抓取网页失败，自动尝试直连
+    if [ -z "$RELEASES_HTML" ] && [ -n "$GH_PROXY" ]; then
+        echo "⚠️ 加速节点检索超时，尝试直连 GitHub..."
+        RELEASES_HTML=$(curl -fsSL --connect-timeout 10 "https://github.com")
+    fi
+
+    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查网络或更换脚本顶部的 GH_PROXY 地址！"; return 1; }
 
     if [ "$BRANCH_CHOICE" = "2" ]; then
         LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+-reF1nd' | head -n1 | cut -d'/' -f2)
@@ -49,20 +72,22 @@ install_ref1nd_core() {
     [ -z "$LATEST_TAG" ] && { echo "❌ 未能解析到对应分支的版本号！"; return 1; }
     echo "📌 锁定版本: ${LATEST_TAG}"
 
-    # 直接从该版本的资产列表中提取真实的 linux-amd64 / linux-arm64 压缩包路径
-    ASSETS_HTML=$(curl -fsSL "https://github.com/expanded_assets/${LATEST_TAG}")
+    # 检索真实资产文件名
+    ASSETS_URL=$(gh_url "https://github.com/expanded_assets/${LATEST_TAG}")
+    ASSETS_HTML=$(curl -fsSL --connect-timeout 10 "$ASSETS_URL" 2>/dev/null)
     ASSET_PATH=$(echo "$ASSETS_HTML" | grep -oE "/reF1nd/sing-box-releases/releases/download/${LATEST_TAG}/sing-box-[^\"]*linux-${ARCH}[^\"]*\.tar\.gz" | head -n1)
 
     if [ -n "$ASSET_PATH" ]; then
-        DOWNLOAD_URL="https://github.com${ASSET_PATH}"
+        RAW_DOWNLOAD="https://github.com${ASSET_PATH}"
     else
-        # 兜底标准命名（无 purego/musl 后缀）
         VER=${LATEST_TAG#v}
-        DOWNLOAD_URL="https://github.com/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}.tar.gz"
+        RAW_DOWNLOAD="https://github.com/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}.tar.gz"
     fi
 
-    echo "📥 正在下载: $DOWNLOAD_URL"
-    curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL" || { echo "❌ 下载失败！"; return 1; }
+    DOWNLOAD_URL=$(gh_url "$RAW_DOWNLOAD")
+    echo "📥 正在加速下载: $DOWNLOAD_URL"
+
+    curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL" || { echo "❌ 下载失败，请检查加速节点是否可用！"; return 1; }
 
     rm -rf /tmp/sb_extract && mkdir -p /tmp/sb_extract
     tar -xzf /tmp/sb_ref1nd.tar.gz -C /tmp/sb_extract
@@ -79,7 +104,7 @@ install_ref1nd_core() {
     echo "✅ reF1nd 内核 (${LATEST_TAG}) 安装完成！"
 }
 
-# 开启系统 IP 转发（旁路由/TUN 透明代理必需）
+# 开启系统 IP 转发
 enable_ip_forward() {
     if [ -d "/etc/sysctl.d" ]; then
         cat << 'EOF' > /etc/sysctl.d/99-sb-ref1nd.conf
@@ -90,7 +115,7 @@ EOF
     fi
 }
 
-# 注册系统级后台守护 (自动适配 OpenWrt procd 与 Debian/Ubuntu systemd)
+# 注册系统级后台守护 (兼容 OpenWrt procd 与 Debian/Ubuntu systemd)
 setup_service() {
     if [ -f "/etc/rc.common" ]; then
         cat << 'EOF' > /etc/init.d/sb_ref1nd
@@ -211,7 +236,7 @@ while true; do
     echo "=========================================="
     echo "   sing-box (reF1nd 裸核) 轻量控制台"
     echo "=========================================="
-    echo "  1. 安装 / 升级 reF1nd 内核 (Stable/Testing)"
+    echo "  1. 安装 / 升级 reF1nd 内核 (加速通道)"
     echo "  2. 导入 / 更新订阅配置 (带语法校验)"
     echo "  3. 清除并重设订阅链接"
     echo "  4. 启动 / 重启服务"
