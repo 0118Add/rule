@@ -1,5 +1,5 @@
 #!/bin/sh
-# 仿 ShellCrash 架构的 reF1nd 版 sing-box 极简裸核管理脚本 (彻底防截断版)
+# 仿 ShellCrash 架构的 reF1nd 版 sing-box 极简裸核管理脚本 (精准适配 glibc/musl 与 -reF1nd 后缀)
 
 GH_PROXY="https://ghfast.top"
 PROTO="https://"
@@ -14,7 +14,7 @@ SUB_FILE="$BASE_DIR/sub.url"
 
 mkdir -p "$BASE_DIR"
 
-# 拼接完整仓库根路径（防止浏览器复制截断）
+# 拼接完整仓库根路径（防止浏览器扩展复制截断）
 REPO_BASE="${PROTO}${DOMAIN}/${REPO_USER}/${REPO_NAME}"
 
 gh_url() {
@@ -41,11 +41,22 @@ get_arch() {
     esac
 }
 
+# 自动识别系统运行库类型 (OpenWrt/Alpine 为 musl，Debian/Ubuntu 为 glibc)
+get_libc() {
+    if [ -f "/etc/openwrt_release" ] || ldd --version 2>&1 | grep -qi "musl"; then
+        echo "musl"
+    else
+        echo "glibc"
+    fi
+}
+
 # 1. 安装 / 升级 reF1nd 版 sing-box 裸核
 install_ref1nd_core() {
     ARCH=$(get_arch)
+    LIBC=$(get_libc)
     [ "$ARCH" = "unsupported" ] && { echo "❌ 不支持的 CPU 架构: $(uname -m)"; return 1; }
 
+    echo "🖥️ 检测到系统架构: ${ARCH} | 运行库: ${LIBC}"
     echo "请选择要安装的 reF1nd 内核分支："
     echo "  1. Stable 正式版 (推荐)"
     echo "  2. Testing 测试版 (包含 alpha/beta/rc)"
@@ -65,50 +76,35 @@ install_ref1nd_core() {
         if [ "$BRANCH_CHOICE" = "2" ]; then
             LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)[^"'\'']*' | head -n1 | awk -F'/' '{print $NF}')
         else
-            LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+(-reF1nd)?' | head -n1 | awk -F'/' '{print $NF}')
+            LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+-reF1nd' | head -n1 | awk -F'/' '{print $NF}')
         fi
     fi
 
     if [ -z "$LATEST_TAG" ]; then
-        echo "⚠️ 自动解析未命中，请手动输入版本号（例如 v1.14.6-reF1nd 或 1.14.6）："
+        echo "⚠️ 自动解析未命中，请手动输入版本号（例如 1.14.6 或 v1.14.6-reF1nd）："
         read -r INPUT_VER
         [ -z "$INPUT_VER" ] && return 1
-        # 自动补全开头的 v
+        # 自动补全开头的 v 与结尾的 -reF1nd
         case "$INPUT_VER" in
             v*) LATEST_TAG="$INPUT_VER" ;;
             *)  LATEST_TAG="v${INPUT_VER}" ;;
         esac
-    fi
-    echo "📌 锁定版本标签: ${LATEST_TAG}"
-
-    # 检索真实资产文件名
-    ASSETS_URL=$(gh_url "${REPO_BASE}/releases/expanded_assets/${LATEST_TAG}")
-    ASSETS_HTML=$(curl -fsSL --connect-timeout 15 "$ASSETS_URL" 2>/dev/null)
-    ASSET_PATH=$(echo "$ASSETS_HTML" | grep -oE "/${REPO_USER}/${REPO_NAME}/releases/download/${LATEST_TAG}/sing-box-[^\"]*linux-${ARCH}[^\"]*\.tar\.gz" | head -n1)
-
-    if [ -n "$ASSET_PATH" ]; then
-        RAW_DOWNLOAD="${PROTO}${DOMAIN}${ASSET_PATH}"
-    else
-        VER=${LATEST_TAG#v}
-        # 优先尝试带 -reF1nd 的标准文件名，若不存在再试不带后缀的
-        RAW_DOWNLOAD="${REPO_BASE}/releases/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}.tar.gz"
+        case "$LATEST_TAG" in
+            *-reF1nd|*-alpha*|*-beta*|*-rc*) ;;
+            *) LATEST_TAG="${LATEST_TAG}-reF1nd" ;;
+        esac
     fi
 
+    VER=${LATEST_TAG#v}
+    RAW_DOWNLOAD="${REPO_BASE}/releases/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}-${LIBC}.tar.gz"
     DOWNLOAD_URL=$(gh_url "$RAW_DOWNLOAD")
-    echo "📥 正在加速下载: $DOWNLOAD_URL"
+
+    echo "📌 锁定版本标签: ${LATEST_TAG}"
+    echo "📥 正在加速下载: ${DOWNLOAD_URL}"
 
     if ! curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL"; then
-        # 自动尝试带 -reF1nd 后缀的标签格式兜底
-        case "$LATEST_TAG" in
-            *-reF1nd) ;;
-            *)
-                ALT_TAG="${LATEST_TAG}-reF1nd"
-                ALT_VER=${ALT_TAG#v}
-                ALT_URL=$(gh_url "${REPO_BASE}/releases/download/${ALT_TAG}/sing-box-${ALT_VER}-linux-${ARCH}.tar.gz")
-                echo "🔄 尝试备用命名下载: $ALT_URL"
-                curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$ALT_URL" || { echo "❌ 下载失败，请核对版本号是否正确！"; return 1; }
-                ;;
-        esac
+        echo "⚠️ 加速通道下载失败，尝试官方直连..."
+        curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$RAW_DOWNLOAD" || { echo "❌ 下载失败，请检查版本号或网络连接！"; return 1; }
     fi
 
     rm -rf /tmp/sb_extract && mkdir -p /tmp/sb_extract
@@ -250,7 +246,7 @@ while true; do
     echo "=========================================="
     echo "   sing-box (reF1nd 裸核) 轻量控制台"
     echo "=========================================="
-    echo "  1. 安装 / 升级 reF1nd 内核 (加速通道)"
+    echo "  1. 安装 / 升级 reF1nd 内核 (自动识别 glibc/musl)"
     echo "  2. 导入 / 更新订阅配置 (带语法校验)"
     echo "  3. 清除并重设订阅链接"
     echo "  4. 启动 / 重启服务"
