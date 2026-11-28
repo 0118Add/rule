@@ -1,10 +1,11 @@
 #!/bin/sh
-# 仿 ShellCrash 架构的 reF1nd 版 sing-box 极简裸核管理脚本 (内置 GitHub 加速)
+# 仿 ShellCrash 架构的 reF1nd 版 sing-box 极简裸核管理脚本 (彻底防截断版)
 
-# ================= 配置区 =================
-# GitHub 加速前缀（末尾不要加斜杠；若在海外机器运行，将其留空 GH_PROXY="" 即可）
 GH_PROXY="https://ghfast.top"
-# ==========================================
+PROTO="https://"
+DOMAIN="github.com"
+REPO_USER="reF1nd"
+REPO_NAME="sing-box-releases"
 
 BASE_DIR="/etc/sb_ref1nd"
 BIN_PATH="$BASE_DIR/sing-box"
@@ -13,13 +14,14 @@ SUB_FILE="$BASE_DIR/sub.url"
 
 mkdir -p "$BASE_DIR"
 
-# 构造带加速的 GitHub 完整链接
+# 拼接完整仓库根路径（防止浏览器复制截断）
+REPO_BASE="${PROTO}${DOMAIN}/${REPO_USER}/${REPO_NAME}"
+
 gh_url() {
-    RAW_URL="$1"
     if [ -n "$GH_PROXY" ]; then
-        echo "${GH_PROXY}/${RAW_URL}"
+        echo "${GH_PROXY}/$1"
     else
-        echo "${RAW_URL}"
+        echo "$1"
     fi
 }
 
@@ -30,7 +32,6 @@ if [ "$SELF_PATH" != "/usr/bin/sb" ] && [ -w "/usr/bin" ]; then
     chmod +x /usr/bin/sb
 fi
 
-# 识别 CPU 架构
 get_arch() {
     case "$(uname -m)" in
         x86_64|amd64) echo "amd64" ;;
@@ -51,48 +52,64 @@ install_ref1nd_core() {
     printf "请输入数字 [1-2，默认 1]: "
     read -r BRANCH_CHOICE
 
-    echo "🔍 正在通过加速节点检索最新版本号..."
-    RELEASES_URL=$(gh_url "https://github.com")
+    echo "🔍 正在检索 ${REPO_USER}/${REPO_NAME} 最新版本号..."
+    RELEASES_URL=$(gh_url "${REPO_BASE}/releases")
     RELEASES_HTML=$(curl -fsSL --connect-timeout 15 "$RELEASES_URL" 2>/dev/null)
     
     if [ -z "$RELEASES_HTML" ] && [ -n "$GH_PROXY" ]; then
-        echo "⚠️ 加速节点检索超时，尝试直连 GitHub..."
-        RELEASES_HTML=$(curl -fsSL --connect-timeout 15 "https://github.com" 2>/dev/null)
+        echo "⚠️ 加速节点检索超时，尝试直连..."
+        RELEASES_HTML=$(curl -fsSL --connect-timeout 15 "${REPO_BASE}/releases" 2>/dev/null)
     fi
 
-    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查本机网关与 DNS 设置！"; return 1; }
-
-    # 放宽正则匹配：兼容带或不带 -reF1nd 后缀的版本标签
-    if [ "$BRANCH_CHOICE" = "2" ]; then
-        LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)[^"'\'']*' | head -n1 | awk -F'/' '{print $NF}')
-    else
-        LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+(-reF1nd)?' | head -n1 | awk -F'/' '{print $NF}')
+    if [ -n "$RELEASES_HTML" ]; then
+        if [ "$BRANCH_CHOICE" = "2" ]; then
+            LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)[^"'\'']*' | head -n1 | awk -F'/' '{print $NF}')
+        else
+            LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+(-reF1nd)?' | head -n1 | awk -F'/' '{print $NF}')
+        fi
     fi
 
-    # 兜底：若自动解析仍未命中，允许手动输入版本号
     if [ -z "$LATEST_TAG" ]; then
-        echo "⚠️ 自动解析版本号未命中，请手动输入版本号标签（例如 v1.11.4 或直接回车取消）："
-        read -r LATEST_TAG
-        [ -z "$LATEST_TAG" ] && return 1
+        echo "⚠️ 自动解析未命中，请手动输入版本号（例如 v1.14.6-reF1nd 或 1.14.6）："
+        read -r INPUT_VER
+        [ -z "$INPUT_VER" ] && return 1
+        # 自动补全开头的 v
+        case "$INPUT_VER" in
+            v*) LATEST_TAG="$INPUT_VER" ;;
+            *)  LATEST_TAG="v${INPUT_VER}" ;;
+        esac
     fi
-    echo "📌 锁定版本: ${LATEST_TAG}"
+    echo "📌 锁定版本标签: ${LATEST_TAG}"
 
     # 检索真实资产文件名
-    ASSETS_URL=$(gh_url "https://github.com/expanded_assets/${LATEST_TAG}")
+    ASSETS_URL=$(gh_url "${REPO_BASE}/releases/expanded_assets/${LATEST_TAG}")
     ASSETS_HTML=$(curl -fsSL --connect-timeout 15 "$ASSETS_URL" 2>/dev/null)
-    ASSET_PATH=$(echo "$ASSETS_HTML" | grep -oE "/reF1nd/sing-box-releases/releases/download/${LATEST_TAG}/sing-box-[^\"]*linux-${ARCH}[^\"]*\.tar\.gz" | head -n1)
+    ASSET_PATH=$(echo "$ASSETS_HTML" | grep -oE "/${REPO_USER}/${REPO_NAME}/releases/download/${LATEST_TAG}/sing-box-[^\"]*linux-${ARCH}[^\"]*\.tar\.gz" | head -n1)
 
     if [ -n "$ASSET_PATH" ]; then
-        RAW_DOWNLOAD="https://github.com${ASSET_PATH}"
+        RAW_DOWNLOAD="${PROTO}${DOMAIN}${ASSET_PATH}"
     else
         VER=${LATEST_TAG#v}
-        RAW_DOWNLOAD="https://github.com/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}.tar.gz"
+        # 优先尝试带 -reF1nd 的标准文件名，若不存在再试不带后缀的
+        RAW_DOWNLOAD="${REPO_BASE}/releases/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}.tar.gz"
     fi
 
     DOWNLOAD_URL=$(gh_url "$RAW_DOWNLOAD")
     echo "📥 正在加速下载: $DOWNLOAD_URL"
 
-    curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL" || { echo "❌ 下载失败！"; return 1; }
+    if ! curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL"; then
+        # 自动尝试带 -reF1nd 后缀的标签格式兜底
+        case "$LATEST_TAG" in
+            *-reF1nd) ;;
+            *)
+                ALT_TAG="${LATEST_TAG}-reF1nd"
+                ALT_VER=${ALT_TAG#v}
+                ALT_URL=$(gh_url "${REPO_BASE}/releases/download/${ALT_TAG}/sing-box-${ALT_VER}-linux-${ARCH}.tar.gz")
+                echo "🔄 尝试备用命名下载: $ALT_URL"
+                curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$ALT_URL" || { echo "❌ 下载失败，请核对版本号是否正确！"; return 1; }
+                ;;
+        esac
+    fi
 
     rm -rf /tmp/sb_extract && mkdir -p /tmp/sb_extract
     tar -xzf /tmp/sb_ref1nd.tar.gz -C /tmp/sb_extract
@@ -109,7 +126,6 @@ install_ref1nd_core() {
     echo "✅ reF1nd 内核 (${LATEST_TAG}) 安装完成！"
 }
 
-# 开启系统 IP 转发
 enable_ip_forward() {
     if [ -d "/etc/sysctl.d" ]; then
         cat << 'EOF' > /etc/sysctl.d/99-sb-ref1nd.conf
@@ -120,7 +136,6 @@ EOF
     fi
 }
 
-# 注册系统级后台守护 (兼容 OpenWrt procd 与 Debian/Ubuntu systemd)
 setup_service() {
     if [ -f "/etc/rc.common" ]; then
         cat << 'EOF' > /etc/init.d/sb_ref1nd
@@ -164,7 +179,6 @@ EOF
     fi
 }
 
-# 2. 更新配置文件并执行语法熔断校验
 update_config() {
     [ ! -x "$BIN_PATH" ] && { echo "❌ 请先安装 reF1nd 内核 (选项 1)！"; return 1; }
 
@@ -191,7 +205,6 @@ update_config() {
     fi
 }
 
-# 3. 启停服务控制
 control_service() {
     ACTION="$1"
     if [ -f "/etc/init.d/sb_ref1nd" ]; then
@@ -202,7 +215,6 @@ control_service() {
     echo ">>> 服务已执行: $ACTION"
 }
 
-# 4. 查看状态与日志
 show_status() {
     if pgrep -f "$BIN_PATH" >/dev/null 2>&1; then
         echo "🟢 运行状态: 运行中 (PID: $(pgrep -f "$BIN_PATH"))"
@@ -218,7 +230,6 @@ show_status() {
     fi
 }
 
-# 5. 开启每日定时自动更新配置
 enable_cron() {
     if [ -d "/etc/cron.d" ]; then
         echo "0 4 * * * root /usr/bin/sb update" > /etc/cron.d/sb_ref1nd
@@ -229,13 +240,11 @@ enable_cron() {
     echo "✅ 已开启每天凌晨 04:00 自动更新订阅配置！"
 }
 
-# 支持命令行直调参数：sb update
 if [ "$1" = "update" ]; then
     update_config
     exit $?
 fi
 
-# 主交互菜单
 while true; do
     echo ""
     echo "=========================================="
