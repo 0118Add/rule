@@ -3,7 +3,7 @@
 
 # ================= 配置区 =================
 # GitHub 加速前缀（末尾不要加斜杠；若在海外机器运行，将其留空 GH_PROXY="" 即可）
-GH_PROXY="https://gh-proxy.com"
+GH_PROXY="https://ghfast.top"
 # ==========================================
 
 BASE_DIR="/etc/sb_ref1nd"
@@ -46,35 +46,40 @@ install_ref1nd_core() {
     [ "$ARCH" = "unsupported" ] && { echo "❌ 不支持的 CPU 架构: $(uname -m)"; return 1; }
 
     echo "请选择要安装的 reF1nd 内核分支："
-    echo "  1. Stable 正式版 (推荐，稳定性高)"
-    echo "  2. Testing 测试版 (包含最新 alpha/beta 特性)"
+    echo "  1. Stable 正式版 (推荐)"
+    echo "  2. Testing 测试版 (包含 alpha/beta/rc)"
     printf "请输入数字 [1-2，默认 1]: "
     read -r BRANCH_CHOICE
 
-    echo "🔍 正在通过加速节点检索 reF1nd 最新版本号..."
+    echo "🔍 正在通过加速节点检索最新版本号..."
     RELEASES_URL=$(gh_url "https://github.com")
-    RELEASES_HTML=$(curl -fsSL --connect-timeout 10 "$RELEASES_URL")
+    RELEASES_HTML=$(curl -fsSL --connect-timeout 15 "$RELEASES_URL" 2>/dev/null)
     
-    # 若加速节点抓取网页失败，自动尝试直连
     if [ -z "$RELEASES_HTML" ] && [ -n "$GH_PROXY" ]; then
         echo "⚠️ 加速节点检索超时，尝试直连 GitHub..."
-        RELEASES_HTML=$(curl -fsSL --connect-timeout 10 "https://github.com")
+        RELEASES_HTML=$(curl -fsSL --connect-timeout 15 "https://github.com" 2>/dev/null)
     fi
 
-    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查网络或更换脚本顶部的 GH_PROXY 地址！"; return 1; }
+    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查本机网关与 DNS 设置！"; return 1; }
 
+    # 放宽正则匹配：兼容带或不带 -reF1nd 后缀的版本标签
     if [ "$BRANCH_CHOICE" = "2" ]; then
-        LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+-reF1nd' | head -n1 | cut -d'/' -f2)
+        LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)[^"'\'']*' | head -n1 | awk -F'/' '{print $NF}')
     else
-        LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'tag/v[0-9]+\.[0-9]+\.[0-9]+-reF1nd' | head -n1 | cut -d'/' -f2)
+        LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'releases/tag/v[0-9]+\.[0-9]+\.[0-9]+(-reF1nd)?' | head -n1 | awk -F'/' '{print $NF}')
     fi
 
-    [ -z "$LATEST_TAG" ] && { echo "❌ 未能解析到对应分支的版本号！"; return 1; }
+    # 兜底：若自动解析仍未命中，允许手动输入版本号
+    if [ -z "$LATEST_TAG" ]; then
+        echo "⚠️ 自动解析版本号未命中，请手动输入版本号标签（例如 v1.11.4 或直接回车取消）："
+        read -r LATEST_TAG
+        [ -z "$LATEST_TAG" ] && return 1
+    fi
     echo "📌 锁定版本: ${LATEST_TAG}"
 
     # 检索真实资产文件名
     ASSETS_URL=$(gh_url "https://github.com/expanded_assets/${LATEST_TAG}")
-    ASSETS_HTML=$(curl -fsSL --connect-timeout 10 "$ASSETS_URL" 2>/dev/null)
+    ASSETS_HTML=$(curl -fsSL --connect-timeout 15 "$ASSETS_URL" 2>/dev/null)
     ASSET_PATH=$(echo "$ASSETS_HTML" | grep -oE "/reF1nd/sing-box-releases/releases/download/${LATEST_TAG}/sing-box-[^\"]*linux-${ARCH}[^\"]*\.tar\.gz" | head -n1)
 
     if [ -n "$ASSET_PATH" ]; then
@@ -87,7 +92,7 @@ install_ref1nd_core() {
     DOWNLOAD_URL=$(gh_url "$RAW_DOWNLOAD")
     echo "📥 正在加速下载: $DOWNLOAD_URL"
 
-    curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL" || { echo "❌ 下载失败，请检查加速节点是否可用！"; return 1; }
+    curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL" || { echo "❌ 下载失败！"; return 1; }
 
     rm -rf /tmp/sb_extract && mkdir -p /tmp/sb_extract
     tar -xzf /tmp/sb_ref1nd.tar.gz -C /tmp/sb_extract
