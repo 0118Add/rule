@@ -3,7 +3,7 @@
 
 # ================= 配置区 =================
 # GitHub 加速前缀（末尾不要加斜杠；若在海外机器运行，将其留空 GH_PROXY="" 即可）
-GH_PROXY="https://gh-proxy.com"
+GH_PROXY="https://ghfast.top"
 # ==========================================
 
 BASE_DIR="/etc/sb_ref1nd"
