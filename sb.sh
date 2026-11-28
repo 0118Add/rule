@@ -37,8 +37,8 @@ install_ref1nd_core() {
     read -r BRANCH_CHOICE
 
     echo "🔍 正在检索 reF1nd 官方仓库最新版本号..."
-    RELEASES_HTML=$(curl -fsSL "https://github.com/reF1nd/sing-box-releases/releases")
-    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查网络或代理设置！"; return 1; }
+    RELEASES_HTML=$(curl -fsSL "https://github.com")
+    [ -z "$RELEASES_HTML" ] && { echo "❌ 无法连接 GitHub，请检查网络！"; return 1; }
 
     if [ "$BRANCH_CHOICE" = "2" ]; then
         LATEST_TAG=$(echo "$RELEASES_HTML" | grep -oE 'tag/v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+-reF1nd' | head -n1 | cut -d'/' -f2)
@@ -47,22 +47,23 @@ install_ref1nd_core() {
     fi
 
     [ -z "$LATEST_TAG" ] && { echo "❌ 未能解析到对应分支的版本号！"; return 1; }
-    VER=${LATEST_TAG#v}
+    echo "📌 锁定版本: ${LATEST_TAG}"
 
-    # 自动探测可用发行包后缀 (purego 通用静态版优先，兼容 musl 与 glibc)
-    DOWNLOAD_URL=""
-    for VARIANT in purego musl glibc; do
-        TEST_URL="https://github.com{LATEST_TAG}/sing-box-${VER}-linux-${ARCH}-${VARIANT}.tar.gz"
-        if curl -fsI "$TEST_URL" >/dev/null 2>&1; then
-            DOWNLOAD_URL="$TEST_URL"
-            break
-        fi
-    done
+    # 直接从该版本的资产列表中提取真实的 linux-amd64 / linux-arm64 压缩包路径
+    ASSETS_HTML=$(curl -fsSL "https://github.com/expanded_assets/${LATEST_TAG}")
+    ASSET_PATH=$(echo "$ASSETS_HTML" | grep -oE "/reF1nd/sing-box-releases/releases/download/${LATEST_TAG}/sing-box-[^\"]*linux-${ARCH}[^\"]*\.tar\.gz" | head -n1)
 
-    [ -z "$DOWNLOAD_URL" ] && { echo "❌ 未找到适配 ${ARCH} 的预编译包！"; return 1; }
+    if [ -n "$ASSET_PATH" ]; then
+        DOWNLOAD_URL="https://github.com${ASSET_PATH}"
+    else
+        # 兜底标准命名（无 purego/musl 后缀）
+        VER=${LATEST_TAG#v}
+        DOWNLOAD_URL="https://github.com/download/${LATEST_TAG}/sing-box-${VER}-linux-${ARCH}.tar.gz"
+    fi
+
     echo "📥 正在下载: $DOWNLOAD_URL"
-
     curl -fsSL --retry 3 -o /tmp/sb_ref1nd.tar.gz "$DOWNLOAD_URL" || { echo "❌ 下载失败！"; return 1; }
+
     rm -rf /tmp/sb_extract && mkdir -p /tmp/sb_extract
     tar -xzf /tmp/sb_ref1nd.tar.gz -C /tmp/sb_extract
 
